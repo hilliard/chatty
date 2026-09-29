@@ -1,0 +1,7 @@
+node_modules
+dist
+.git
+.env*
+.codex
+.npm-cache
+test-results

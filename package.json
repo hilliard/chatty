@@ -1,0 +1,20 @@
+{
+  "name": "chatty",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "dev": "node scripts/run.mjs development dev",
+    "build": "astro build",
+    "start": "node scripts/run.mjs production start",
+    "db:setup": "npm run db:migrate",
+    "db:migrate": "node scripts/run.mjs development migrate",
+    "db:migrate:prod": "node scripts/run.mjs production migrate",
+    "events:worker": "node scripts/run.mjs development worker",
+    "events:worker:prod": "node scripts/run.mjs production worker",
+    "events:smoke": "node scripts/run.mjs development smoke",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": { "astro": "7.3.5", "@astrojs/node": "11.1.6", "dotenv": "^17.2.0", "pg": "^8.16.0" }
+}

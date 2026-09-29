@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+.npm-cache/
+.env*
+!.env*.example
+.codex/
+test-results/
+playwright-report/
+*.log
