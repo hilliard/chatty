@@ -1,0 +1,934 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Chatty API",
+    "version": "1.0.0",
+    "description": "Cookie-authenticated live chat. Send JSON for POST requests; join and leave also support URL-encoded forms. Errors use { error: string }. Documentation version follows package.json."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System"
+    },
+    {
+      "name": "Identity"
+    },
+    {
+      "name": "Rooms"
+    },
+    {
+      "name": "Messages"
+    },
+    {
+      "name": "Live"
+    },
+    {
+      "name": "Notifications"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "chatSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "chat_user_id"
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "app_version",
+          "db",
+          "db_synchronized",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "error"
+            ]
+          },
+          "app_version": {
+            "type": "string"
+          },
+          "db": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ]
+          },
+          "db_synchronized": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Check service and database health",
+        "description": "200: up; 503: down; 500: error. Includes app_version, db, db_synchronized, timestamp.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service and migrations are healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Schema mismatch or health-check error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Read versioned API documentation",
+        "description": "200: HTML documentation.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "200: HTML documentation."
+          }
+        }
+      }
+    },
+    "/api/docs/openapi.json": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Download the OpenAPI contract",
+        "description": "200: OpenAPI 3.1 JSON.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "200: OpenAPI 3.1 JSON."
+          }
+        }
+      }
+    },
+    "/api/join": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Create a nickname identity",
+        "description": "303: sets HttpOnly session and remembered-browser cookies; redirects to /rooms/lobby. 409: nickname taken.",
+        "security": [],
+        "responses": {
+          "303": {
+            "description": "303: sets HttpOnly session and remembered-browser cookies; redirects to /rooms/lobby. 409: nickname taken."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          },
+          "409": {
+            "description": "Nickname already taken"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "description": "string"
+                  }
+                },
+                "required": [
+                  "nickname"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leave": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Log out of the current session",
+        "description": "303: clears session cookie and redirects to /join.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "303: clears session cookie and redirects to /join."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "forget": {
+                    "type": "string",
+                    "description": "string (optional; \"true\" also forgets this browser)"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rename": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Change your nickname",
+        "description": "200: { nickname }. 409: nickname taken. Broadcasts rename events.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { nickname }. 409: nickname taken. Broadcasts rename events."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          },
+          "409": {
+            "description": "Nickname already taken"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "description": "string"
+                  }
+                },
+                "required": [
+                  "nickname"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/identity/restore": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Restore a remembered or recovered identity",
+        "description": "200: { ok: true }; sets fresh cookies. 400: invalid or expired credential. Nickname alone never authenticates.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "200: { ok: true }; sets fresh cookies. 400: invalid or expired credential. Nickname alone never authenticates."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "string (optional; omit to use chat_remember cookie)"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/identity/forget": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Forget this browser",
+        "description": "200: { ok: true }; revokes chat_remember cookie. Does not end an active session.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "200: { ok: true }; revokes chat_remember cookie. Does not end an active session."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/identity/recovery-code": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Create or replace your recovery code",
+        "description": "200: { code }. Replaces the previous code. Response is not cacheable; save privately.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { code }. Replaces the previous code. Response is not cacheable; save privately."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rooms": {
+      "get": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "List rooms and online counts",
+        "description": "200: array of rooms, each with online count.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: array of rooms, each with online count."
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Create a room",
+        "description": "201: { room }. Broadcasts newroom.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "201: { room }. Broadcasts newroom."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "string (1–48 characters)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "string (optional; up to 180 characters)"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rooms/{id}/history": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Load saved messages",
+        "description": "200: { messages, more }. Up to 50 messages in chronological order. Use before or after with the opaque cursor returned on each message; do not supply both.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { messages, more }. Up to 50 messages in chronological order. Use before or after with the opaque cursor returned on each message; do not supply both."
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Room ID returned by the room list."
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque message cursor. Supply only one direction."
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque message cursor. Supply only one direction."
+          }
+        ]
+      }
+    },
+    "/api/rooms/{id}/messages": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Send a message and create mentions",
+        "description": "201: saved message. Author comes from the session, never the request body.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "201: saved message. Author comes from the session, never the request body."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "string (1–4,000 characters)"
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Room ID returned by the room list."
+          }
+        ]
+      }
+    },
+    "/api/rooms/{id}/typing": {
+      "post": {
+        "tags": [
+          "Live"
+        ],
+        "summary": "Update your typing state",
+        "description": "204: no body. Typing expires after two seconds.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "204: no body. Typing expires after two seconds."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "boolean",
+                    "description": "boolean (optional; defaults to true)"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Room ID returned by the room list."
+          }
+        ]
+      }
+    },
+    "/api/rooms/{id}/stream": {
+      "get": {
+        "tags": [
+          "Live"
+        ],
+        "summary": "Subscribe to a room",
+        "description": "200: text/event-stream. Room messages, presence, userlist, typing, private mentions, and global room updates.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: text/event-stream. Room messages, presence, userlist, typing, private mentions, and global room updates.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Room ID returned by the room list."
+          }
+        ]
+      }
+    },
+    "/api/stream": {
+      "get": {
+        "tags": [
+          "Live"
+        ],
+        "summary": "Subscribe to community updates",
+        "description": "200: text/event-stream. Global presence counts, newroom, renamed, private mentions, notificationsread. Does not join a room.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: text/event-stream. Global presence counts, newroom, renamed, private mentions, notificationsread. Does not join a room.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "List your unread mentions",
+        "description": "200: { notifications, count }. Up to 50 latest unread mentions and total unread count.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { notifications, count }. Up to 50 latest unread mentions and total unread count."
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/read": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark all your mentions read",
+        "description": "204: no body. Broadcasts notificationsread to your sessions.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "204: no body. Broadcasts notificationsread to your sessions."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

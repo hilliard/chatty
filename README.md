@@ -1,9 +1,8 @@
 # Chatty
 
-Multi-room chat application under construction. This milestone provides the Astro
-SSR foundation, PostgreSQL migrations, environment configuration, and a durable
-Event Dashboard publisher. The nickname/chat UI and chat acceptance tests are not
-implemented yet.
+Multi-room live chat with nickname identities, saved messages, presence, typing,
+mentions, and a responsive colorful interface. Built with Astro SSR, PostgreSQL,
+and Server-Sent Events, with a durable Event Dashboard publisher.
 
 ## Local development (Windows)
 
@@ -19,8 +18,8 @@ Requires Node.js 22.12+ and native PostgreSQL. No local Docker is required.
 Use a dedicated Chatty database, not the event-dashboard database. URI-encode
 special characters in the database password. No credentials are committed.
 
-`npm test` checks foundation contracts. `npm run build` verifies the production
-build. `/api/health` checks database connectivity and returns 503 when unavailable.
+`npm test` checks foundation and health contracts. `npm run build` verifies the
+production build and generates versioned API documentation and a migration manifest.
 
 ## Environment configuration
 
@@ -110,3 +109,61 @@ Coolify configuration is prepared here; no remote repository or live deployment
 has been created. Official references:
 [Dockerfile builds](https://coolify.io/docs/applications/builds/dockerfile) and
 [environment variables](https://coolify.io/docs/applications/configuration/environment-variables).
+
+## Returning to your nickname
+
+Ordinary **Log out** ends the current session while remembering this browser for
+30 days. On `/join`, use **Continue as your-nickname**. This uses a private HttpOnly
+browser token, not your nickname as a password.
+
+In the desktop sidebar, choose **Save a recovery code**. On mobile, open the room
+list and use the recovery-code button beside your name. Create a code, copy it,
+and store it privately. On another browser, open **Already have a nickname? Use a
+recovery code** on `/join` and paste the code. Creating another code invalidates
+the previous code. The server stores hashes only; it cannot show an old code.
+
+Use **Log out and forget this browser** in the recovery dialog on shared devices.
+You can also choose **Forget this browser** on `/join`. A forgotten browser needs
+a recovery code to regain access. Clearing cookies also removes remembered access.
+
+For a legacy account stranded before recovery was implemented, the local database
+administrator can run `node scripts/recover-identity.mjs sonny`. This creates the
+first recovery code only and saves it to `.recovery/sonny.txt`, excluded from Git
+and Docker. This is not a public API. Remove the file after storing the code safely.
+
+## Application verification
+
+Run `npm run build`, `npm test`, `npm run test:api`, and `npm run test:e2e`.
+The latter commands use isolated temporary PostgreSQL schemas and regenerate
+`docs/api-tests.md` and `docs/e2e-tests.md`. The live suite uses two independent
+HTTP/SSE sessions; browser visuals and interactions are verified separately.
+
+## API documentation and health
+
+- `/api/docs`: public, searchable endpoint reference, showing the application version.
+- `/api/docs/openapi.json`: OpenAPI 3.1 contract for API tooling.
+- `npm run test:api`: generates documentation, builds the current app, runs API tests
+  in an isolated PostgreSQL schema, and writes `docs/api-tests.md` with the version
+  and actual outcomes. `docs/api.md` and `docs/openapi.json` are generated from the
+  same contract used by the live documentation page.
+
+The version source is `package.json`. Update that version and rebuild to publish
+matching documentation. Migration filenames retain the API version they belong to;
+old migrations are never renamed to match a newer release.
+
+`GET /api/health` is public and never cached. Its JSON contains `status`,
+`app_version`, `db`, `db_synchronized`, and `timestamp`:
+
+| Status | HTTP | Meaning |
+| --- | --- | --- |
+| `up` | 200 | PostgreSQL reachable; applied migrations match the build manifest |
+| `down` | 503 | PostgreSQL unreachable or its connectivity check failed |
+| `error` | 500 | Migration mismatch or schema inspection failed |
+
+The migration check compares counts, numbers, filenames, API versions, and SHA-256
+checksums, not merely whether a migration table exists. The manifest is generated
+before builds and at development startup. Database details and exception text are
+not returned. If the app process is stopped, it cannot return JSON; monitoring
+must classify connection failure as down. Coolify can use this as its readiness
+health check. Favicon artwork lives in `public/favicon.svg` and is linked by the
+shared page layout.

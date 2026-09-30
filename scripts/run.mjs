@@ -17,6 +17,7 @@ if (action === 'migrate') {
   try { await enqueueEvent(pool, 'integration.test', { source: 'events:smoke' }); }
   finally { await pool.end(); }
 } else if (action === 'start' || action === 'dev') {
+  if (action === 'dev') await import('./generate-api.mjs');
   if (action === 'start') {
     const { migrate } = await import('./migrate.mjs');
     await migrate();

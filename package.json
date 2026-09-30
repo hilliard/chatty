@@ -6,6 +6,7 @@
   "engines": { "node": ">=22.12.0" },
   "scripts": {
     "dev": "node scripts/run.mjs development dev",
+    "prebuild": "node scripts/generate-api.mjs",
     "build": "astro build",
     "start": "node scripts/run.mjs production start",
     "db:setup": "npm run db:migrate",
@@ -14,7 +15,9 @@
     "events:worker": "node scripts/run.mjs development worker",
     "events:worker:prod": "node scripts/run.mjs production worker",
     "events:smoke": "node scripts/run.mjs development smoke",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:api": "npm run build && node scripts/test-chat.mjs api",
+    "test:e2e": "node scripts/test-chat.mjs e2e"
   },
   "dependencies": { "astro": "7.3.5", "@astrojs/node": "11.1.6", "dotenv": "^17.2.0", "pg": "^8.16.0" }
 }

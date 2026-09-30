@@ -1,0 +1,7 @@
+---
+import Chat from '../../components/Chat.astro';
+import { pool } from '../../server/db.mjs';
+const { rows } = await pool.query('SELECT * FROM rooms WHERE id=$1', [Astro.params.id]);
+if (!rows[0]) return Astro.redirect('/rooms');
+---
+<Chat room={rows[0]} />

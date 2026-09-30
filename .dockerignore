@@ -5,3 +5,4 @@ dist
 .codex
 .npm-cache
 test-results
+.recovery

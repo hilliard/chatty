@@ -1,0 +1,26 @@
+[
+  {
+    "number": 1,
+    "filename": "001-1.0.0-chatty-schema.sql",
+    "checksum": "cfeb7acb66e5c22235e7a0da5ce8aafa305b7aa42a7cad9d5b5bc15b43fa78c2",
+    "apiVersion": "1.0.0"
+  },
+  {
+    "number": 2,
+    "filename": "002-1.0.0-event-outbox.sql",
+    "checksum": "b3af694245d28f04160a92256a5a82ac9b3c36a7f65cc045955ced901213d023",
+    "apiVersion": "1.0.0"
+  },
+  {
+    "number": 3,
+    "filename": "003-1.0.0-browser-sessions.sql",
+    "checksum": "30473e9d5a44887889f29a902c3bf6ab929a1812a957b585368fa13d051ce67a",
+    "apiVersion": "1.0.0"
+  },
+  {
+    "number": 4,
+    "filename": "004-1.0.0-identity-recovery.sql",
+    "checksum": "de415b94a5509195d03f5d94512fff2ac16f93c5b46ce90281056e2f560bea73",
+    "apiVersion": "1.0.0"
+  }
+]

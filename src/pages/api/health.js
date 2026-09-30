@@ -1,7 +1,6 @@
 import { pool } from '../../server/db.mjs';
+import { healthReport } from '../../server/health.mjs';
 export async function GET() {
-  try {
-    await pool.query('SELECT 1 FROM schema_migrations LIMIT 1');
-    return Response.json({ status: 'ok', apiVersion: '1.0.0' });
-  } catch { return Response.json({ status: 'unavailable' }, { status: 503 }); }
+  const result = await healthReport(pool);
+  return Response.json(result.body, { status: result.status, headers: { 'Cache-Control': 'no-store' } });
 }

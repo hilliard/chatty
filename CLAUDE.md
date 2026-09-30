@@ -10,8 +10,21 @@ A real-time chat app with multiple rooms. People pick a nickname (no passwords),
 
 - No passwords. The join page asks for a nickname and creates a user.
 - Remember the user on this browser with an httpOnly cookie (`chat_user_id`, 30-day expiry), so a refresh keeps them in the chat.
-- Middleware protects application routes except `/join`, `/api/join`, static assets, and the public `/api/health` infrastructure endpoint. Without a valid cookie, redirect to `/join`.
+- Middleware protects application routes except `/join`, `/api/join`, `/api/identity/restore`, `/api/identity/forget`, static assets, and the public `/api/health`, `/api/docs`, and `/api/docs/openapi.json` endpoints. Without a valid cookie, redirect to `/join`.
 - Get the acting user from the cookie on the server. Never trust a user ID sent in a form or request body.
+
+### Returning identities
+
+- Nicknames alone never authenticate an existing person.
+- The server stores hashed browser-session tokens and remembered-browser tokens.
+- Ordinary logout clears the active session but remembers the identity for 30 days.
+- `/join` offers Continue as the remembered identity and recovery-code sign-in.
+- Recovery codes are random 256-bit secrets stored only as hashes; only authenticated
+  users can create/replace their code. Replacing a code invalidates the prior code.
+- Offer Forget this browser on `/join` and Log out and forget this browser in the
+  recovery dialog for shared devices. Recovery files stay out of Git and images.
+- Legacy identities without a remembered token require administrator-assisted
+  recovery via the local CLI, never unauthenticated nickname reclamation.
 
 ## Saved state and live state
 
