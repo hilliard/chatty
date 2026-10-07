@@ -477,6 +477,172 @@
         }
       }
     },
+    "/api/avatar": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Upload your profile avatar",
+        "description": "200: { version }. Accepts JPEG, PNG, or WebP image bytes up to 5 MB; images are normalized to 256px WebP.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { version }. Accepts JPEG, PNG, or WebP image bytes up to 5 MB; images are normalized to 256px WebP."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/avatar/delete": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Remove your profile avatar",
+        "description": "204: no body. Restores the nickname initials avatar.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "204: no body. Restores the nickname initials avatar."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/avatars/{humanId}": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Read an authenticated user avatar",
+        "description": "200: versioned image/webp bytes. 404: no avatar.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: versioned image/webp bytes. 404: no avatar.",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "humanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/api/rooms": {
       "get": {
         "tags": [

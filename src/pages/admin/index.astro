@@ -7,6 +7,7 @@ type AdminUser = {
   human_id: string;
   nickname: string;
   color: string;
+  avatar_version: number | null;
   account_status: string;
   deletion_at: string | null;
 };
@@ -65,7 +66,14 @@ const [users, rooms] = await Promise.all([
               <div class="admin-user-cell">
                 <>
                   <span class="avatar" style={`--avatar:${item.color}`}>
-                    {item.nickname.slice(0, 2).toUpperCase()}
+                    {item.avatar_version ? (
+                      <img
+                        src={`/api/avatars/${item.human_id}?v=${item.avatar_version}`}
+                        alt=""
+                      />
+                    ) : (
+                      item.nickname.slice(0, 2).toUpperCase()
+                    )}
                   </span>
                   <div>
                     <>

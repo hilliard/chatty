@@ -49,6 +49,27 @@ document.addEventListener('pointerdown', () => { if (sound) audio ??= new AudioC
 soundState();
 document.querySelectorAll('[data-open]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.open).showModal()));
 document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
+$('#avatar-form')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget, file = $('#avatar-file').files?.[0], error = $('#avatar-settings .form-error');
+  const button = form.querySelector('[type=submit]');
+  error.textContent = '';
+  if (!file) { error.textContent = 'Choose an image first.'; return; }
+  if (file.size > 5 * 1024 * 1024) { error.textContent = 'Choose an image smaller than 5 MB.'; return; }
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/avatar', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+    if (!response.ok) throw new Error((await response.json()).error || 'Could not save that avatar.');
+    location.reload();
+  } catch (problem) { error.textContent = problem instanceof Error ? problem.message : 'Could not save that avatar.'; }
+  finally { button.disabled = false; }
+});
+$('#remove-avatar')?.addEventListener('click', async () => {
+  const button = $('#remove-avatar'), error = $('#avatar-settings .form-error');
+  button.disabled = true; error.textContent = '';
+  try { await api('avatar/delete', {}); location.reload(); }
+  catch (problem) { error.textContent = problem instanceof Error ? problem.message : 'Could not remove the avatar.'; button.disabled = false; }
+});
 for (const [formId, endpoint, finish] of [
   ['new-room-form', 'rooms', result => location.assign(`/rooms/${result.room.id}`)],
   ['rename-form', 'rename', result => { myName = result.nickname; document.querySelectorAll('.my-name').forEach(el => el.textContent = myName); $('#rename').close(); }],
@@ -77,7 +98,16 @@ async function notifications() {
 $('#notifications-toggle').addEventListener('click', () => { const panel = $('#notifications-panel'); panel.hidden = !panel.hidden; $('#notifications-toggle').setAttribute('aria-expanded', String(!panel.hidden)); if (!panel.hidden) notifications(); });
 $('#read-notifications').addEventListener('click', async () => { try { await api('notifications/read', {}); await notifications(); } catch {} });
 document.addEventListener('click', event => { if (!event.target.closest('.notifications-wrap')) { $('#notifications-panel').hidden = true; $('#notifications-toggle').setAttribute('aria-expanded', 'false'); } });
-function avatar(user) { const el = node('span', 'avatar', (user.nickname || '?').slice(0, 2).toUpperCase()); if (/^#[0-9a-f]{6}$/i.test(user.color)) el.style.setProperty('--avatar', user.color); return el; }
+function avatar(user) {
+  const el = node('span', 'avatar', (user.nickname || '?').slice(0, 2).toUpperCase());
+  if (/^#[0-9a-f]{6}$/i.test(user.color)) el.style.setProperty('--avatar', user.color);
+  if (user.avatar_version) {
+    const image = node('img'); image.alt = ''; image.loading = 'lazy';
+    image.src = `/api/avatars/${encodeURIComponent(user.human_id)}?v=${user.avatar_version}`;
+    el.replaceChildren(image);
+  }
+  return el;
+}
 function renderPeople() {
   const list = $('#people-list'); if (!list) return;
   list.replaceChildren(); $('#people-count').textContent = online.length;
@@ -237,6 +267,13 @@ events.addEventListener('userdeleted', event => {
 events.addEventListener('accountstatus', () => location.reload());
 events.addEventListener('accountblocked', () => location.replace('/join?blocked=1'));
 events.addEventListener('rolechanged', event => { if (JSON.parse(event.data).humanId === me) location.reload(); });
+events.addEventListener('avatarupdated', event => {
+  const { humanId, version } = JSON.parse(event.data);
+  if (humanId === me) { location.reload(); return; }
+  for (const person of online) if (person.human_id === humanId) person.avatar_version = version;
+  for (const message of messages.values()) if (message.human_id === humanId) message.avatar_version = version;
+  renderPeople(); renderMessages();
+});
 events.addEventListener('renamed', event => { const data = JSON.parse(event.data); if (data.humanId === me) { myName = data.nickname; document.querySelectorAll('.my-name').forEach(el => el.textContent = myName); } for (const message of messages.values()) if (message.human_id === data.humanId) message.nickname = data.nickname; renderMessages(); });
 window.addEventListener('pagehide', () => events.close());
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });

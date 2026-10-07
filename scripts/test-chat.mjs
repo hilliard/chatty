@@ -5,6 +5,7 @@ import { createServer } from 'node:net';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
+import sharp from 'sharp';
 import { config } from 'dotenv';
 import { migrate } from './migrate.mjs';
 import { appVersion, endpoints, markdownDocs } from '../src/server/api-contract.mjs';
@@ -99,6 +100,25 @@ try {
       const response = await fetch(`${base}/rooms/${room}`, { headers: { cookie: alice.cookie } });
       assert.equal(response.status, 200); assert.match(await response.text(), /Test studio/);
       const list = await (await bob.request('rooms')).json(); assert.ok(list.some(r => r.id === room));
+    });
+    await check('Avatar uploads are normalized, authenticated, and removable', async () => {
+      const { rows } = await testPool.query("SELECT human_id FROM chat_profiles WHERE nickname='Bob'");
+      const humanId = rows[0].human_id;
+      const source = await sharp({ create: { width: 512, height: 384, channels: 3, background: '#4a8' } }).png().toBuffer();
+      assert.equal((await fetch(`${base}/api/avatar`, { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: source })).status, 401);
+      const uploaded = await fetch(`${base}/api/avatar`, { method: 'POST', headers: { cookie: bob.cookie, 'Content-Type': 'image/png' }, body: source });
+      assert.equal(uploaded.status, 200);
+      const { version } = await uploaded.json(); assert.equal(version, 1);
+      const ownPage = await fetch(`${base}/rooms/${room}`, { headers: { cookie: bob.cookie } });
+      assert.match(await ownPage.text(), new RegExp(`/api/avatars/${humanId}\\?v=1`));
+      const imageResponse = await alice.request(`avatars/${humanId}?v=${version}`);
+      assert.equal(imageResponse.status, 200); assert.match(imageResponse.headers.get('content-type'), /image\/webp/);
+      const metadata = await sharp(Buffer.from(await imageResponse.arrayBuffer())).metadata();
+      assert.equal(metadata.format, 'webp'); assert.equal(metadata.width, 256); assert.equal(metadata.height, 256);
+      const invalid = await fetch(`${base}/api/avatar`, { method: 'POST', headers: { cookie: bob.cookie, 'Content-Type': 'image/png' }, body: Buffer.from('not an image') });
+      assert.equal(invalid.status, 400);
+      assert.equal((await bob.request('avatar/delete', {})).status, 204);
+      assert.equal((await alice.request(`avatars/${humanId}?v=${version}`)).status, 404);
     });
     await check('Administrator user and room management is authorized and persistent', async () => {
       await testPool.query("UPDATE chat_profiles SET role='admin' WHERE nickname='Alice'");
@@ -199,6 +219,18 @@ try {
   } else {
     const a = await connect(alice, room), b = await connect(bob, room);
     await check('Two independent sessions see each other online', async () => { await a.wait('userlist', users => users.length === 2); await b.wait('userlist', users => users.length === 2); });
+    await check('Avatar changes propagate to connected room members', async () => {
+      const { rows } = await testPool.query("SELECT human_id FROM chat_profiles WHERE nickname='Alice'");
+      const humanId = rows[0].human_id;
+      const image = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#6a4' } }).png().toBuffer();
+      const uploaded = await fetch(`${base}/api/avatar`, { method: 'POST', headers: { cookie: alice.cookie, 'Content-Type': 'image/png' }, body: image });
+      assert.equal(uploaded.status, 200); const { version } = await uploaded.json();
+      await b.wait('avatarupdated', data => data.humanId === humanId && data.version === version);
+      await a.wait('userlist', users => users.some(user => user.human_id === humanId && user.avatar_version === version));
+      assert.equal((await alice.request('avatar/delete', {})).status, 204);
+      await b.wait('avatarupdated', data => data.humanId === humanId && data.version === null);
+      await a.wait('userlist', users => users.some(user => user.human_id === humanId && user.avatar_version === null));
+    });
     await check('Messages arrive live in both directions', async () => {
       await alice.request(`rooms/${room}/messages`, { content: 'Hello Bob' }); await b.wait('message', m => m.content === 'Hello Bob');
       await bob.request(`rooms/${room}/messages`, { content: 'Hello Alice' }); await a.wait('message', m => m.content === 'Hello Alice');

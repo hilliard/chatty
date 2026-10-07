@@ -10,6 +10,9 @@ export const endpoints = [
   ['post', '/api/identity/restore', 'Identity', 'Restore a remembered or recovered identity', 'public', { code: 'string (optional; omit to use chat_remember cookie)' }, '200: { ok: true }; sets fresh cookies. 400: invalid or expired credential. Nickname alone never authenticates.'],
   ['post', '/api/identity/forget', 'Identity', 'Forget this browser', 'public', {}, '200: { ok: true }; revokes chat_remember cookie. Does not end an active session.'],
   ['post', '/api/identity/recovery-code', 'Identity', 'Create or replace your recovery code', 'session', {}, '200: { code }. Replaces the previous code. Response is not cacheable; save privately.'],
+  ['post', '/api/avatar', 'Identity', 'Upload your profile avatar', 'session', {}, '200: { version }. Accepts JPEG, PNG, or WebP image bytes up to 5 MB; images are normalized to 256px WebP.'],
+  ['post', '/api/avatar/delete', 'Identity', 'Remove your profile avatar', 'session', {}, '204: no body. Restores the nickname initials avatar.'],
+  ['get', '/api/avatars/{humanId}', 'Identity', 'Read an authenticated user avatar', 'session', null, '200: versioned image/webp bytes. 404: no avatar.'],
   ['get', '/api/rooms', 'Rooms', 'List rooms and online counts', 'session', null, '200: array of rooms, each with online count.'],
   ['post', '/api/rooms', 'Rooms', 'Create a room', 'session', { name: 'string (1–48 characters)', description: 'string (optional; up to 180 characters)' }, '201: { room }. Broadcasts newroom.'],
   ['get', '/api/rooms/{id}/history', 'Messages', 'Load saved messages', 'session', null, '200: { messages, more }. Up to 50 messages in chronological order. Use before or after with the opaque cursor returned on each message; do not supply both.'],
@@ -63,6 +66,11 @@ for (const endpoint of endpoints) {
     const properties = Object.fromEntries(Object.entries(endpoint.body).map(([key, description]) => [key, { type: description.startsWith('boolean') ? 'boolean' : 'string', description }]));
     operation.requestBody = { required: Object.values(endpoint.body).some(value => !value.includes('optional')), content: { 'application/json': { schema: { type: 'object', properties, required: Object.entries(endpoint.body).filter(([, value]) => !value.includes('optional')).map(([key]) => key) } } } };
   }
+  if (endpoint.path === '/api/avatar') operation.requestBody = {
+    required: true,
+    content: Object.fromEntries(['image/jpeg', 'image/png', 'image/webp'].map(type => [type, { schema: { type: 'string', format: 'binary' } }])),
+  };
+  if (endpoint.path === '/api/avatars/{humanId}') operation.responses['200'].content = { 'image/webp': { schema: { type: 'string', format: 'binary' } } };
   const pathParameters = [...endpoint.path.matchAll(/\{([^}]+)\}/g)].map(([, name]) => ({ name, in: 'path', required: true, schema: { type: 'string' } }));
   if (pathParameters.length) operation.parameters = pathParameters;
   if (endpoint.path.endsWith('/history')) operation.parameters.push(...['before', 'after'].map(name => ({ name, in: 'query', schema: { type: 'string' }, description: 'Opaque message cursor. Supply only one direction.' })));

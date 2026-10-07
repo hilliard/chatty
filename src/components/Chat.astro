@@ -7,6 +7,7 @@ type ChatUser = {
   human_id: string;
   nickname: string;
   color: string;
+  avatar_version: number | null;
   role: string;
   account_status: string;
   deletion_at: string | null;
@@ -48,7 +49,8 @@ const allRooms = (await rooms()) as RoomItem[];
         <span>CONVERSATION ROOMS</span><button
           class="small-button"
           data-open="new-room"
-          aria-label="Create a room"><Icon name="plus" size={17} /></button
+          aria-label="Create a room"
+          title="Create a room"><Icon name="plus" size={17} /></button
         >
       </div>
       <nav id="room-nav" aria-label="Chat rooms">
@@ -76,19 +78,39 @@ const allRooms = (await rooms()) as RoomItem[];
           <span>✳</span><strong
             >A little kindness.<br />A lot of good chat.</strong
           ><p>There’s a person behind every nickname.</p>
-        </div><button class="text-button recovery-access" data-open="recovery"
+        </div><button
+          class="text-button avatar-access"
+          data-open="avatar-settings">Change avatar</button
+        ><button class="text-button recovery-access" data-open="recovery"
           >Save a recovery code</button
         ><div class="profile-bar">
-          <span class="avatar" style={`--avatar:${user.color}`}
-            >{user.nickname.slice(0, 2).toUpperCase()}</span
-          ><div>
+          <button
+            class="avatar-control"
+            data-open="avatar-settings"
+            aria-label="Change avatar"
+            title="Change avatar"
+          >
+            <span class="avatar my-avatar" style={`--avatar:${user.color}`}>
+              {
+                user.avatar_version ? (
+                  <img
+                    src={`/api/avatars/${user.human_id}?v=${user.avatar_version}`}
+                    alt=""
+                  />
+                ) : (
+                  user.nickname.slice(0, 2).toUpperCase()
+                )
+              }
+            </span>
+          </button><div>
             <strong class="my-name">{user.nickname}</strong><small
               ><i class="status-dot"></i> Ready to chat</small
             >
           </div><button
             class="icon-button"
             data-open="rename"
-            aria-label="Change nickname"><Icon name="edit" size={17} /></button
+            aria-label="Change nickname"
+            title="Change nickname"><Icon name="edit" size={17} /></button
           ><form action="/api/leave" method="post">
             <button class="icon-button" aria-label="Log out" title="Log out"
               ><Icon name="exit" size={18} /></button
@@ -126,11 +148,13 @@ const allRooms = (await rooms()) as RoomItem[];
             ><i class="status-dot"></i><span>Connecting</span></span
           ><button
             class="icon-button theme-toggle"
-            aria-label="Toggle color theme"><Icon name="sun" /></button
+            aria-label="Toggle color theme"
+            title="Toggle color theme"><Icon name="sun" /></button
           ><button
             class="icon-button"
             id="sound-toggle"
             aria-label="Enable notification sounds"
+            title="Toggle notification sounds"
             aria-pressed="false"
             ><Icon name="sound" /><span class="mute-slash"></span></button
           ><div class="notifications-wrap">
@@ -138,6 +162,7 @@ const allRooms = (await rooms()) as RoomItem[];
               class="icon-button"
               id="notifications-toggle"
               aria-label="Notifications"
+              title="View notifications"
               aria-expanded="false"
               ><Icon name="bell" /><span id="notification-count" hidden
               ></span></button
@@ -320,6 +345,26 @@ const allRooms = (await rooms()) as RoomItem[];
           <section class="directory">
             <>
               <div class="mobile-profile">
+                <button
+                  class="avatar-control"
+                  data-open="avatar-settings"
+                  aria-label="Change avatar"
+                  title="Change avatar"
+                >
+                  <span
+                    class="avatar my-avatar"
+                    style={`--avatar:${user.color}`}
+                  >
+                    {user.avatar_version ? (
+                      <img
+                        src={`/api/avatars/${user.human_id}?v=${user.avatar_version}`}
+                        alt=""
+                      />
+                    ) : (
+                      user.nickname.slice(0, 2).toUpperCase()
+                    )}
+                  </span>
+                </button>
                 <strong class="my-name">{user.nickname}</strong>
                 {user.role === "admin" && (
                   <a class="text-button" href="/admin">
@@ -339,6 +384,7 @@ const allRooms = (await rooms()) as RoomItem[];
                     class="icon-button"
                     data-open="rename"
                     aria-label="Change nickname"
+                    title="Change nickname"
                   >
                     <Icon name="edit" />
                   </button>
@@ -408,7 +454,8 @@ const allRooms = (await rooms()) as RoomItem[];
           type="button"
           class="icon-button"
           data-close
-          aria-label="Close"><Icon name="close" /></button
+          aria-label="Close dialog"
+          title="Close dialog"><Icon name="close" /></button
         >
       </div><h2>A new conversation<br />starts with you.</h2><label
         for="room-name">Room name</label
@@ -441,7 +488,8 @@ const allRooms = (await rooms()) as RoomItem[];
           type="button"
           class="icon-button"
           data-close
-          aria-label="Close"><Icon name="close" /></button
+          aria-label="Close dialog"
+          title="Close dialog"><Icon name="close" /></button
         >
       </div><h2>New name.<br />Same you.</h2><label for="new-nickname"
         >Your nickname</label
@@ -458,12 +506,56 @@ const allRooms = (await rooms()) as RoomItem[];
       >
     </form>
   </dialog>
+  <dialog id="avatar-settings">
+    <form id="avatar-form">
+      <div class="dialog-top">
+        <span class="eyebrow">YOUR PROFILE</span><button
+          type="button"
+          class="icon-button"
+          data-close
+          aria-label="Close dialog"
+          title="Close dialog"><Icon name="close" /></button
+        >
+      </div>
+      <h2>Your avatar</h2>
+      <div class="avatar-preview">
+        <span class="avatar" style={`--avatar:${user.color}`}>
+          {
+            user.avatar_version ? (
+              <img
+                src={`/api/avatars/${user.human_id}?v=${user.avatar_version}`}
+                alt=""
+              />
+            ) : (
+              user.nickname.slice(0, 2).toUpperCase()
+            )
+          }
+        </span>
+      </div>
+      <label for="avatar-file">Choose an image</label>
+      <input
+        id="avatar-file"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        required
+      />
+      <p class="field-hint">JPEG, PNG, or WebP. Maximum 5 MB.</p>
+      <p class="form-error" role="alert"></p>
+      <button class="primary-button" type="submit"
+        >Save avatar <Icon name="upload" /></button
+      >
+      <button class="text-button remove-avatar" id="remove-avatar" type="button"
+        >Remove avatar</button
+      >
+    </form>
+  </dialog>
   <dialog id="members">
     <div class="dialog-top">
       <h2>In this room</h2><button
         class="icon-button"
         data-close
-        aria-label="Close"><Icon name="close" /></button
+        aria-label="Close dialog"
+        title="Close dialog"><Icon name="close" /></button
       >
     </div><div id="mobile-people-list"></div>
   </dialog>
@@ -472,7 +564,8 @@ const allRooms = (await rooms()) as RoomItem[];
       <span class="eyebrow">KEEP YOUR NICKNAME</span><button
         class="icon-button"
         data-close
-        aria-label="Close"><Icon name="close" /></button
+        aria-label="Close dialog"
+        title="Close dialog"><Icon name="close" /></button
       >
     </div><h2>Your way back in.</h2><p>
       Save a private recovery code to sign in on another browser. Anyone with

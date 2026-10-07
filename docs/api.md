@@ -70,6 +70,28 @@ Body: {}
 
 200: { code }. Replaces the previous code. Response is not cacheable; save privately.
 
+## POST /api/avatar
+
+Upload your profile avatar. Authentication: session.
+
+Body: {}
+
+200: { version }. Accepts JPEG, PNG, or WebP image bytes up to 5 MB; images are normalized to 256px WebP.
+
+## POST /api/avatar/delete
+
+Remove your profile avatar. Authentication: session.
+
+Body: {}
+
+204: no body. Restores the nickname initials avatar.
+
+## GET /api/avatars/{humanId}
+
+Read an authenticated user avatar. Authentication: session.
+
+200: versioned image/webp bytes. 404: no avatar.
+
 ## GET /api/rooms
 
 List rooms and online counts. Authentication: session.

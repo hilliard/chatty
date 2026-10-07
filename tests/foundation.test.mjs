@@ -17,7 +17,7 @@ test('migration convention requires number, semantic API version, and name', () 
 
 test('checked-in migrations are ordered, checksummed, and runner-transactional', async () => {
   const files = await migrationFiles(new URL('../database/migrations/', import.meta.url));
-  assert.deepEqual(files.map(f => f.number), [1, 2, 3, 4, 5]);
+  assert.deepEqual(files.map(f => f.number), [1, 2, 3, 4, 5, 6]);
   for (const file of files) {
     assert.match(file.checksum, /^[a-f0-9]{64}$/);
     assert.doesNotMatch(file.sql, /^\s*(BEGIN|COMMIT);/mi);

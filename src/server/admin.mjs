@@ -6,8 +6,9 @@ import { emit, id, live, nickname, systemMessage, transaction } from './chat.mjs
 const failure = (message, status = 400) => Object.assign(new Error(message), { status });
 
 export async function listUsers() {
-  const { rows } = await pool.query(`SELECT human_id,nickname,color,role,account_status,deletion_at,created_at
-    FROM chat_profiles WHERE human_id <> 'system' ORDER BY nickname`);
+  const { rows } = await pool.query(`SELECT p.human_id,p.nickname,p.color,p.role,p.account_status,p.deletion_at,p.created_at,a.version AS avatar_version
+    FROM chat_profiles p LEFT JOIN chat_avatars a ON a.human_id=p.human_id
+    WHERE p.human_id <> 'system' ORDER BY p.nickname`);
   return rows;
 }
 

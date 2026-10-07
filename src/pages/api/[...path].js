@@ -3,12 +3,28 @@ import { enqueueEvent } from '../../server/events.mjs';
 import * as chat from '../../server/chat.mjs';
 import * as identity from '../../server/identity.mjs';
 import * as admin from '../../server/admin.mjs';
+import * as avatars from '../../server/avatars.mjs';
 
 export async function ALL(context) {
   const { request, url, locals, cookies } = context;
   const path = context.params.path, user = locals.user, post = request.method === 'POST';
   if (!post && request.method !== 'GET') return new Response(null, { status: 405 });
   try {
+    if (post && path === 'avatar') {
+      if (!user) return Response.json({ error: 'Please join again.' }, { status: 401 });
+      const result = await avatars.saveAvatar(user.human_id, request);
+      return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
+    }
+    const avatarPath = /^avatars\/([a-zA-Z0-9_-]{12,64})$/.exec(path);
+    if (!post && avatarPath) {
+      if (!user) return Response.json({ error: 'Please join again.' }, { status: 401 });
+      const humanId = avatarPath[1], avatar = await avatars.getAvatar(humanId);
+      if (!avatar) return Response.json({ error: 'Avatar not found.' }, { status: 404 });
+      const etag = `"chat-avatar-${humanId}-${avatar.version}"`;
+      const headers = { 'Content-Type': 'image/webp', 'Cache-Control': 'private, max-age=31536000, immutable', ETag: etag, 'X-Content-Type-Options': 'nosniff', Vary: 'Cookie' };
+      if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers });
+      return new Response(avatar.image, { headers });
+    }
     let data = {};
     if (post) {
       const body = await request.text();
@@ -30,6 +46,10 @@ export async function ALL(context) {
       return Response.json({ ok: true });
     }
     if (!user) return Response.json({ error: 'Please join again.' }, { status: 401 });
+    if (post && path === 'avatar/delete') {
+      await avatars.removeAvatar(user.human_id);
+      return new Response(null, { status: 204 });
+    }
     if (path.startsWith('admin/')) {
       if (user.role !== 'admin') return Response.json({ error: 'Administrator access required.' }, { status: 403 });
       if (!post && path === 'admin/users') return Response.json(await admin.listUsers());

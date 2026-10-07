@@ -28,5 +28,11 @@
     "filename": "005-1.0.0-admin-user-management.sql",
     "checksum": "b74a691365ff92758a4e6a9658ad40e4ddf2c84bfd508284a9eedea45af907b4",
     "apiVersion": "1.0.0"
+  },
+  {
+    "number": 6,
+    "filename": "006-1.0.0-chat-avatars.sql",
+    "checksum": "11b6ca3834cd66b3995bacf759ec103320c9b29a4a17b36b6316838d7bfae4db",
+    "apiVersion": "1.0.0"
   }
 ]

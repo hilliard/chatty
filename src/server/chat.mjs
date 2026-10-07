@@ -22,7 +22,8 @@ export async function transaction(work) {
 export async function currentUser(cookies) {
   const token = cookies.get('chat_user_id')?.value;
   if (!token || !/^[a-zA-Z0-9_-]{43}$/.test(token)) return null;
-  const { rows } = await pool.query(`SELECT p.* FROM browser_sessions s JOIN chat_profiles p ON p.human_id=s.human_id
+  const { rows } = await pool.query(`SELECT p.*,a.version AS avatar_version FROM browser_sessions s
+    JOIN chat_profiles p ON p.human_id=s.human_id LEFT JOIN chat_avatars a ON a.human_id=p.human_id
     WHERE s.token_hash=$1 AND s.expires_at>now()`, [digest(token)]);
   return rows[0] ?? null;
 }
@@ -143,9 +144,9 @@ export async function history(roomId, params) {
     args.push(time, messageId || (after ? '~' : ''));
     clause = `AND (m.created_at,m.id) ${after ? '>' : '<'} ($2::timestamptz,$3)`;
   }
-  const { rows } = await pool.query(`SELECT m.*, p.nickname,p.color,
+  const { rows } = await pool.query(`SELECT m.*, p.nickname,p.color,a.version AS avatar_version,
     to_char(m.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') || '|' || m.id AS cursor
-    FROM messages m LEFT JOIN chat_profiles p ON p.human_id=m.human_id
+    FROM messages m LEFT JOIN chat_profiles p ON p.human_id=m.human_id LEFT JOIN chat_avatars a ON a.human_id=p.human_id
     WHERE m.room_id=$1 ${clause} ORDER BY m.created_at ${after ? 'ASC' : 'DESC'},m.id ${after ? 'ASC' : 'DESC'} LIMIT 51`, args);
   const more = rows.length > 50;
   const page = rows.slice(0, 50);
@@ -165,7 +166,7 @@ export async function sendMessage(roomId, user, text) {
       to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') || '|' || id AS cursor`, [messageId, roomId, user.human_id, content]);
     for (const recipient of recipients) await client.query('INSERT INTO notifications(id,human_id,from_human_id,room_id,message_id,preview) VALUES($1,$2,$3,$4,$5,$6)', [id(), recipient, user.human_id, roomId, messageId, content.slice(0, 160)]);
     await enqueueEvent(client, 'message.sent', { roomId, messageId, humanId: user.human_id, mentionCount: recipients.size });
-    return { ...rows[0], nickname: user.nickname, color: user.color };
+    return { ...rows[0], nickname: user.nickname, color: user.color, avatar_version: user.avatar_version };
   });
   emit('message', message, roomId); typing(roomId, user, false);
   for (const recipient of recipients) emit('mention', { roomId, messageId }, null, recipient);

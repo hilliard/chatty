@@ -74,5 +74,5 @@ export async function createManagedIdentity(value) {
     await client.query('INSERT INTO recovery_codes(human_id,code_hash) VALUES($1,$2)', [humanId, hash(code)]);
     await enqueueEvent(client, 'user.created', { humanId });
   });
-  return { user: { human_id: humanId, nickname: name, color, role: 'user', account_status: 'active' }, recoveryCode: code };
+  return { user: { human_id: humanId, nickname: name, color, role: 'user', account_status: 'active', avatar_version: null }, recoveryCode: code };
 }

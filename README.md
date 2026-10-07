@@ -146,6 +146,12 @@ Use **Log out and forget this browser** in the recovery dialog on shared devices
 You can also choose **Forget this browser** on `/join`. A forgotten browser needs
 a recovery code to regain access. Clearing cookies also removes remembered access.
 
+## Profile avatars
+
+Choose **Change avatar** from your profile to upload a JPEG, PNG, or WebP image
+up to 5 MB. Chatty crops and converts it to a 256-pixel WebP avatar. Choose
+**Remove avatar** to return to the nickname initials.
+
 For a legacy account stranded before recovery was implemented, the local database
 administrator can run `node scripts/recover-identity.mjs sonny`. This creates the
 first recovery code only and saves it to `.recovery/sonny.txt`, excluded from Git

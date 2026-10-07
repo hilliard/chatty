@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "node scripts/run.mjs development dev",
     "prebuild": "node scripts/generate-api.mjs",
@@ -19,5 +21,11 @@
     "test:api": "npm run build && node scripts/test-chat.mjs api",
     "test:e2e": "node scripts/test-chat.mjs e2e"
   },
-  "dependencies": { "astro": "7.3.5", "@astrojs/node": "11.1.6", "dotenv": "^17.2.0", "pg": "^8.16.0" }
+  "dependencies": {
+    "@astrojs/node": "11.1.6",
+    "astro": "7.3.5",
+    "dotenv": "^17.2.0",
+    "pg": "^8.16.0",
+    "sharp": "^0.35.5"
+  }
 }
