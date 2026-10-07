@@ -13,7 +13,7 @@ config({ path: '.env.development', quiet: true });
 const suite = process.argv[2] === 'e2e' ? 'e2e' : 'api';
 const results = [], schema = `chatty_test_${Date.now()}`, streams = [];
 const rootPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-let server, base;
+let server, base, testPool;
 async function startServer(port) {
   server = spawn(process.execPath, ['dist/server/entry.mjs'], { env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), NODE_ENV: 'production' }, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = ''; server.stdout.on('data', data => { output += data; }); server.stderr.on('data', data => { output += data; });
@@ -68,6 +68,7 @@ try {
   const connection = new URL(process.env.DATABASE_URL); connection.searchParams.set('options', `-c search_path=${schema}`);
   process.env.DATABASE_URL = connection.toString();
   await migrate();
+  testPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
   const probe = createServer(); probe.listen(0, '127.0.0.1'); await once(probe, 'listening');
   const port = probe.address().port; await new Promise(resolve => probe.close(resolve)); base = `http://127.0.0.1:${port}`;
   await startServer(port);
@@ -98,6 +99,54 @@ try {
       const response = await fetch(`${base}/rooms/${room}`, { headers: { cookie: alice.cookie } });
       assert.equal(response.status, 200); assert.match(await response.text(), /Test studio/);
       const list = await (await bob.request('rooms')).json(); assert.ok(list.some(r => r.id === room));
+    });
+    await check('Administrator user and room management is authorized and persistent', async () => {
+      await testPool.query("UPDATE chat_profiles SET role='admin' WHERE nickname='Alice'");
+      const { rows: aliceRows } = await testPool.query("SELECT human_id FROM chat_profiles WHERE nickname='Alice'");
+      assert.equal((await (await alice.request('admin/users')).json()).some(user => user.nickname === 'Bob'), true);
+      assert.equal((await bob.request('admin/users')).status, 403);
+      assert.equal((await alice.request(`admin/users/${aliceRows[0].human_id}/role`, { role: 'user' })).status, 409);
+      const adminPage = await fetch(`${base}/admin`, { headers: { cookie: alice.cookie } });
+      assert.equal(adminPage.status, 200); assert.match(await adminPage.text(), /Manage users/);
+
+      const createdResponse = await alice.request('admin/users', { nickname: 'ManagedUser' });
+      assert.equal(createdResponse.status, 201); assert.match(createdResponse.headers.get('cache-control'), /no-store/i);
+      const created = await createdResponse.json(); assert.ok(created.recoveryCode);
+      const restored = await fetch(`${base}/api/identity/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: created.recoveryCode }) });
+      assert.equal(restored.status, 200);
+      const makeManagedClient = cookie => ({ cookie, request: (path, data) => fetch(`${base}/api/${path}`, { method: data === undefined ? 'GET' : 'POST', headers: { cookie, 'Content-Type': 'application/json' }, ...(data === undefined ? {} : { body: JSON.stringify(data) }), redirect: 'manual' }) });
+      let managed = makeManagedClient(restored.headers.getSetCookie().find(value => value.startsWith('chat_user_id=')).split(';')[0]);
+      const promoted = await alice.request(`admin/users/${created.user.human_id}/role`, { role: 'admin' });
+      assert.equal(promoted.status, 200, await promoted.text());
+      assert.equal((await managed.request('admin/rooms')).status, 200);
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/rename`, { nickname: 'ManagedRenamed' })).status, 200);
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/status`, { status: 'set_for_deletion' })).status, 200);
+      let users = await (await alice.request('admin/users')).json();
+      assert.equal(users.find(user => user.human_id === created.user.human_id).account_status, 'set_for_deletion');
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/status`, { status: 'active' })).status, 200);
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/role`, { role: 'user' })).status, 200);
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/status`, { status: 'blocked' })).status, 200);
+      assert.equal((await managed.request('rooms')).status, 401);
+      assert.equal((await fetch(`${base}/api/identity/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: created.recoveryCode }) })).status, 400);
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/status`, { status: 'active' })).status, 200);
+      const restoredAfterUnblock = await fetch(`${base}/api/identity/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: created.recoveryCode }) });
+      assert.equal(restoredAfterUnblock.status, 200);
+      managed = makeManagedClient(restoredAfterUnblock.headers.getSetCookie().find(value => value.startsWith('chat_user_id=')).split(';')[0]);
+
+      const createdRoomResponse = await alice.request('admin/rooms', { name: 'Admin studio', description: 'Created in admin' });
+      assert.equal(createdRoomResponse.status, 201);
+      const managedRoom = (await createdRoomResponse.json()).room;
+      assert.equal((await alice.request(`admin/rooms/${managedRoom.id}`, { name: 'Updated studio', description: 'Updated in admin' })).status, 200);
+      const listedRooms = await (await alice.request('admin/rooms')).json();
+      assert.equal(listedRooms.find(item => item.id === managedRoom.id).name, 'Updated studio');
+      assert.equal((await alice.request('admin/rooms/lobby/delete', { confirm: true })).status, 400);
+      assert.equal((await alice.request(`admin/rooms/${managedRoom.id}/delete`, { confirm: true })).status, 200);
+
+      assert.equal((await managed.request(`rooms/${room}/messages`, { content: 'message to be erased' })).status, 201);
+      assert.equal((await alice.request(`admin/users/${created.user.human_id}/delete`, { confirm: true })).status, 200);
+      const history = await (await alice.request(`rooms/${room}/history`)).json();
+      assert.ok(!history.messages.some(message => message.content === 'message to be erased'));
+      assert.equal((await managed.request('rooms')).status, 401);
     });
     await check('Message identity comes from the session and text remains inert', async () => {
       const sent = await alice.request(`rooms/${room}/messages`, { content: '<script>alert(1)</script> @Bob hello', human_id: 'system' }); assert.equal(sent.status, 201);
@@ -196,6 +245,7 @@ try {
 finally {
   for (const stream of streams) await stream.close().catch(() => {});
   if (server && server.exitCode === null) { const stopped = once(server, 'exit'); server.kill(); await stopped; }
+  await testPool?.end();
   await rootPool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`); await rootPool.end();
   await mkdir('docs', { recursive: true });
   if (suite === 'api') await writeFile('docs/api.md', markdownDocs());

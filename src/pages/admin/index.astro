@@ -1,0 +1,286 @@
+---
+import Base from "../../layouts/Base.astro";
+import { listRooms, listUsers } from "../../server/admin.mjs";
+
+type AdminUser = {
+  role: string;
+  human_id: string;
+  nickname: string;
+  color: string;
+  account_status: string;
+  deletion_at: string | null;
+};
+type AdminRoom = { id: string; name: string; description: string | null };
+const user = (Astro.locals as typeof Astro.locals & { user: AdminUser }).user;
+if (user.role !== "admin")
+  return new Response("Administrator access required.", { status: 403 });
+const [users, rooms] = await Promise.all([
+  listUsers() as Promise<AdminUser[]>,
+  listRooms() as Promise<AdminRoom[]>,
+]);
+---
+
+<Base title="Administration · Chatty">
+  <main class="admin-page">
+    <header class="admin-header">
+      <a class="brand" href="/rooms">chatty<span class="brand-dot">.</span></a>
+      <div>
+        <span class="eyebrow">WORKSPACE CONTROL</span><h1>Administration</h1><p>
+          Manage identities and conversation rooms.
+        </p>
+      </div>
+      <a class="text-button" href="/rooms">Back to chat</a>
+    </header>
+    <nav class="admin-tabs" aria-label="Administration sections">
+      <a href="#users">Users <span>{users.length}</span></a>
+      <a href="#rooms">Rooms <span>{rooms.length}</span></a>
+    </nav>
+    <section class="admin-section" id="users">
+      <div class="admin-section-heading">
+        <div><span class="eyebrow">IDENTITIES</span><h2>Manage users</h2></div>
+      </div>
+      <form class="admin-create-form" data-api-form data-path="admin/users">
+        <label for="managed-nickname">Create a user</label>
+        <input
+          id="managed-nickname"
+          name="nickname"
+          minlength="2"
+          maxlength="24"
+          placeholder="Nickname"
+          required
+        />
+        <button class="primary-button compact" type="submit">Create user</button
+        >
+        <p class="admin-feedback form-error" role="alert"></p>
+      </form>
+      <div class="admin-list-head admin-user-grid">
+        <span>User</span><span>Role</span><span>Account</span><span
+          >Actions</span
+        >
+      </div>
+      <div class="admin-list">
+        {
+          users.map((item) => (
+            <article class="admin-row admin-user-grid" data-admin-row>
+              <div class="admin-user-cell">
+                <>
+                  <span class="avatar" style={`--avatar:${item.color}`}>
+                    {item.nickname.slice(0, 2).toUpperCase()}
+                  </span>
+                  <div>
+                    <>
+                      <strong>{item.nickname}</strong>
+                      <small>{item.human_id}</small>
+                    </>
+                  </div>
+                </>
+              </div>
+              <span class="admin-badge">{item.role}</span>
+              <div class="admin-account-state">
+                <span
+                  class:list={[
+                    "admin-badge",
+                    {
+                      blocked: item.account_status === "blocked",
+                      pending: item.account_status === "set_for_deletion",
+                    },
+                  ]}
+                >
+                  {item.account_status.replaceAll("_", " ")}
+                </span>
+                {item.deletion_at && (
+                  <small>
+                    Deletes {new Date(item.deletion_at).toLocaleDateString()}
+                  </small>
+                )}
+              </div>
+              <div class="admin-actions">
+                <form
+                  data-api-form
+                  data-path={`admin/users/${item.human_id}/rename`}
+                >
+                  <>
+                    <input
+                      name="nickname"
+                      aria-label={`Rename ${item.nickname}`}
+                      value={item.nickname}
+                      minlength="2"
+                      maxlength="24"
+                      required
+                    />
+                    <button class="small-button" type="submit">
+                      Save name
+                    </button>
+                    <p class="form-error" role="alert" />
+                  </>
+                </form>
+                <button
+                  class="small-button"
+                  type="button"
+                  data-admin-action
+                  data-path={`admin/users/${item.human_id}/role`}
+                  data-body={JSON.stringify({
+                    role: item.role === "admin" ? "user" : "admin",
+                  })}
+                >
+                  {item.role === "admin" ? "Remove admin" : "Make admin"}
+                </button>
+                <button
+                  class="small-button"
+                  type="button"
+                  data-admin-action
+                  data-path={`admin/users/${item.human_id}/status`}
+                  data-body={JSON.stringify({
+                    status:
+                      item.account_status === "blocked" ? "active" : "blocked",
+                  })}
+                >
+                  {item.account_status === "blocked" ? "Unblock" : "Block"}
+                </button>
+                <button
+                  class="small-button"
+                  type="button"
+                  data-admin-action
+                  data-path={`admin/users/${item.human_id}/status`}
+                  data-body={JSON.stringify({
+                    status:
+                      item.account_status === "set_for_deletion"
+                        ? "active"
+                        : "set_for_deletion",
+                  })}
+                  data-confirm={
+                    item.account_status === "set_for_deletion"
+                      ? ""
+                      : `Schedule ${item.nickname} for permanent deletion in 30 days?`
+                  }
+                >
+                  {item.account_status === "set_for_deletion"
+                    ? "Cancel deletion"
+                    : "Delete in 30 days"}
+                </button>
+                <button
+                  class="small-button danger"
+                  type="button"
+                  data-admin-action
+                  data-path={`admin/users/${item.human_id}/delete`}
+                  data-body={JSON.stringify({ confirm: true })}
+                  data-confirm={`Permanently delete ${item.nickname} and all messages they authored? This cannot be undone.`}
+                >
+                  Delete now
+                </button>
+              </div>
+              <p class="admin-row-feedback form-error" role="alert" />
+            </article>
+          ))
+        }
+      </div>
+    </section>
+    <section class="admin-section" id="rooms">
+      <div class="admin-section-heading">
+        <div>
+          <span class="eyebrow">CONVERSATIONS</span><h2>Manage rooms</h2>
+        </div>
+      </div>
+      <form
+        class="admin-create-form room-create-form"
+        data-api-form
+        data-path="admin/rooms"
+      >
+        <label for="managed-room-name">Create a room</label>
+        <input
+          id="managed-room-name"
+          name="name"
+          maxlength="48"
+          placeholder="Room name"
+          required
+        />
+        <input
+          name="description"
+          maxlength="180"
+          placeholder="Description (optional)"
+          aria-label="Room description"
+        />
+        <button class="primary-button compact" type="submit">Create room</button
+        >
+        <p class="admin-feedback form-error" role="alert"></p>
+      </form>
+      <div class="admin-list-head admin-room-grid">
+        <span>Room</span><span>Description</span><span>Actions</span>
+      </div>
+      <div class="admin-list">
+        {
+          rooms.map((room) => (
+            <article class="admin-row admin-room-grid" data-admin-row>
+              <form data-api-form data-path={`admin/rooms/${room.id}`}>
+                <input
+                  name="name"
+                  aria-label={`Room name for ${room.name}`}
+                  value={room.name}
+                  maxlength="48"
+                  required
+                />
+                <input
+                  name="description"
+                  aria-label={`Room description for ${room.name}`}
+                  value={room.description || ""}
+                  maxlength="180"
+                  placeholder="Description"
+                />
+                <>
+                  <button class="small-button" type="submit">
+                    Save changes
+                  </button>
+                  <p class="form-error" role="alert" />
+                </>
+              </form>
+              <p class="admin-room-description">
+                {room.description || "No description"}
+              </p>
+              <div class="admin-actions">
+                <>
+                  <a class="small-button" href={`/rooms/${room.id}`}>
+                    Open room
+                  </a>
+                  <button
+                    class="small-button danger"
+                    type="button"
+                    data-admin-action
+                    data-path={`admin/rooms/${room.id}/delete`}
+                    data-body={JSON.stringify({ confirm: true })}
+                    data-confirm={`Delete #${room.name} and all of its saved messages? This cannot be undone.`}
+                    disabled={room.id === "lobby"}
+                    title={
+                      room.id === "lobby"
+                        ? "The Lobby cannot be deleted"
+                        : undefined
+                    }
+                  >
+                    Delete room
+                  </button>
+                </>
+              </div>
+              <p class="admin-row-feedback form-error" role="alert" />
+            </article>
+          ))
+        }
+      </div>
+    </section>
+  </main>
+  <dialog id="admin-recovery-code" class="admin-code-dialog">
+    <span class="eyebrow">NEW ACCOUNT</span><h2>
+      Share this recovery code privately
+    </h2>
+    <p>
+      The code is shown only once. The user can enter it from the join page to
+      access this identity.
+    </p>
+    <code id="admin-code-value"></code>
+    <button class="primary-button" type="button" data-copy-code
+      >Copy code</button
+    >
+    <button class="text-button" type="button" data-close-code>Done</button>
+  </dialog>
+  <script>
+    import "../../scripts/admin-client.js";
+  </script>
+</Base>

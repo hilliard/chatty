@@ -19,6 +19,16 @@ export const endpoints = [
   ['get', '/api/stream', 'Live', 'Subscribe to community updates', 'session', null, '200: text/event-stream. Global presence counts, newroom, renamed, private mentions, notificationsread. Does not join a room.'],
   ['get', '/api/notifications', 'Notifications', 'List your unread mentions', 'session', null, '200: { notifications, count }. Up to 50 latest unread mentions and total unread count.'],
   ['post', '/api/notifications/read', 'Notifications', 'Mark all your mentions read', 'session', {}, '204: no body. Broadcasts notificationsread to your sessions.'],
+  ['get', '/api/admin/users', 'Administration', 'List managed users', 'admin', null, '200: users with role and account status.'],
+  ['post', '/api/admin/users', 'Administration', 'Create a user and one-time recovery code', 'admin', { nickname: 'string' }, '201: { user, recoveryCode }. Share the recovery code privately; it is shown only once.'],
+  ['post', '/api/admin/users/{humanId}/rename', 'Administration', 'Change a user nickname', 'admin', { nickname: 'string' }, '200: updated user.'],
+  ['post', '/api/admin/users/{humanId}/role', 'Administration', 'Change a user role', 'admin', { role: 'string (user or admin)' }, '200: updated user. The last administrator cannot be demoted.'],
+  ['post', '/api/admin/users/{humanId}/status', 'Administration', 'Block, restore, or schedule deletion for a user', 'admin', { status: 'string (active, blocked, or set_for_deletion)' }, '200: updated user. Scheduled deletion is permanent after 30 days.'],
+  ['post', '/api/admin/users/{humanId}/delete', 'Administration', 'Permanently delete a user and authored messages', 'admin', { confirm: 'boolean (required)' }, '200: { ok }. Explicit confirmation is required.'],
+  ['get', '/api/admin/rooms', 'Administration', 'List managed rooms', 'admin', null, '200: rooms.'],
+  ['post', '/api/admin/rooms', 'Administration', 'Create a room', 'admin', { name: 'string (1–48 characters)', description: 'string (optional; up to 180 characters)' }, '201: { room }.'],
+  ['post', '/api/admin/rooms/{roomId}', 'Administration', 'Rename a room or update its description', 'admin', { name: 'string (1–48 characters)', description: 'string (optional; up to 180 characters)' }, '200: { room }.'],
+  ['post', '/api/admin/rooms/{roomId}/delete', 'Administration', 'Delete a room and its messages', 'admin', { confirm: 'boolean (required)' }, '200: { ok }. Lobby cannot be deleted.'],
 ].map(([method, path, group, summary, auth, body, result]) => ({ method, path, group, summary, auth, body, result }));
 
 export const openapi = {
@@ -42,17 +52,19 @@ for (const endpoint of endpoints) {
   const success = endpoint.result.match(/^\d+/)[0];
   const operation = {
     tags: [endpoint.group], summary: endpoint.summary, description: endpoint.result,
-    security: endpoint.auth === 'session' ? [{ chatSession: [] }] : [],
+    security: ['session', 'admin'].includes(endpoint.auth) ? [{ chatSession: [] }] : [],
     responses: { [success]: { description: endpoint.result } },
   };
-  if (endpoint.auth === 'session') operation.responses['401'] = { description: 'Missing or expired session', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } };
+  if (['session', 'admin'].includes(endpoint.auth)) operation.responses['401'] = { description: 'Missing or expired session', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } };
+  if (endpoint.auth === 'admin') operation.responses['403'] = { description: 'Administrator access required' };
   if (endpoint.method === 'post') {
     operation.responses['400'] = { description: 'Invalid request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } };
-    operation.responses['403'] = { description: 'Cross-origin request rejected' };
+    operation.responses['403'] = { description: endpoint.auth === 'admin' ? 'Administrator access required or cross-origin request rejected' : 'Cross-origin request rejected' };
     const properties = Object.fromEntries(Object.entries(endpoint.body).map(([key, description]) => [key, { type: description.startsWith('boolean') ? 'boolean' : 'string', description }]));
     operation.requestBody = { required: Object.values(endpoint.body).some(value => !value.includes('optional')), content: { 'application/json': { schema: { type: 'object', properties, required: Object.entries(endpoint.body).filter(([, value]) => !value.includes('optional')).map(([key]) => key) } } } };
   }
-  if (endpoint.path.includes('{id}')) operation.parameters = [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Room ID returned by the room list.' }];
+  const pathParameters = [...endpoint.path.matchAll(/\{([^}]+)\}/g)].map(([, name]) => ({ name, in: 'path', required: true, schema: { type: 'string' } }));
+  if (pathParameters.length) operation.parameters = pathParameters;
   if (endpoint.path.endsWith('/history')) operation.parameters.push(...['before', 'after'].map(name => ({ name, in: 'query', schema: { type: 'string' }, description: 'Opaque message cursor. Supply only one direction.' })));
   if (endpoint.path.endsWith('/stream')) operation.responses['200'].content = { 'text/event-stream': { schema: { type: 'string' } } };
   if (endpoint.path === '/api/health') for (const [status, description] of [['200', 'Service and migrations are healthy'], ['503', 'Database is unreachable'], ['500', 'Schema mismatch or health-check error']]) operation.responses[status] = { description, content: { 'application/json': { schema: { $ref: '#/components/schemas/Health' } } } };

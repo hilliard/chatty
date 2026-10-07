@@ -28,6 +28,9 @@
     },
     {
       "name": "Notifications"
+    },
+    {
+      "name": "Administration"
     }
   ],
   "components": {
@@ -600,8 +603,7 @@
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "description": "Room ID returned by the room list."
+            }
           },
           {
             "name": "before",
@@ -688,8 +690,7 @@
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "description": "Room ID returned by the room list."
+            }
           }
         ]
       }
@@ -758,8 +759,7 @@
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "description": "Room ID returned by the room list."
+            }
           }
         ]
       }
@@ -805,8 +805,7 @@
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "description": "Room ID returned by the room list."
+            }
           }
         ]
       }
@@ -928,6 +927,622 @@
             }
           }
         }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "List managed users",
+        "description": "200: users with role and account status.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: users with role and account status."
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Create a user and one-time recovery code",
+        "description": "201: { user, recoveryCode }. Share the recovery code privately; it is shown only once.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "201: { user, recoveryCode }. Share the recovery code privately; it is shown only once."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "description": "string"
+                  }
+                },
+                "required": [
+                  "nickname"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{humanId}/rename": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Change a user nickname",
+        "description": "200: updated user.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: updated user."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "description": "string"
+                  }
+                },
+                "required": [
+                  "nickname"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "humanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{humanId}/role": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Change a user role",
+        "description": "200: updated user. The last administrator cannot be demoted.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: updated user. The last administrator cannot be demoted."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "description": "string (user or admin)"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "humanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{humanId}/status": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Block, restore, or schedule deletion for a user",
+        "description": "200: updated user. Scheduled deletion is permanent after 30 days.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: updated user. Scheduled deletion is permanent after 30 days."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "string (active, blocked, or set_for_deletion)"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "humanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{humanId}/delete": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Permanently delete a user and authored messages",
+        "description": "200: { ok }. Explicit confirmation is required.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { ok }. Explicit confirmation is required."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "boolean (required)"
+                  }
+                },
+                "required": [
+                  "confirm"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "humanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/rooms": {
+      "get": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "List managed rooms",
+        "description": "200: rooms.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: rooms."
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Create a room",
+        "description": "201: { room }.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "201: { room }."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "string (1–48 characters)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "string (optional; up to 180 characters)"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/rooms/{roomId}": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Rename a room or update its description",
+        "description": "200: { room }.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { room }."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "string (1–48 characters)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "string (optional; up to 180 characters)"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/rooms/{roomId}/delete": {
+      "post": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Delete a room and its messages",
+        "description": "200: { ok }. Lobby cannot be deleted.",
+        "security": [
+          {
+            "chatSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "200: { ok }. Lobby cannot be deleted."
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or expired session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator access required or cross-origin request rejected"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "boolean (required)"
+                  }
+                },
+                "required": [
+                  "confirm"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     }
   }

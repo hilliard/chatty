@@ -1,56 +1,225 @@
 ---
-import Base from '../layouts/Base.astro';
-import Icon from '../components/Icon.astro';
-import { rememberedUser } from '../server/identity.mjs';
-if (Astro.locals.user) return Astro.redirect('/rooms/lobby');
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+import { rememberedUser } from "../server/identity.mjs";
+const currentUser = (Astro.locals as typeof Astro.locals & { user?: unknown })
+  .user;
+if (currentUser) return Astro.redirect("/rooms/lobby");
 const remembered = await rememberedUser(Astro.cookies);
+const blocked = Astro.url.searchParams.get("blocked") === "1";
 ---
+
 <Base>
   <div class="join-page">
-    <header class="join-nav"><a href="/" class="brand"><span class="brand-icon"><Icon name="chat" size={25} /></span>chatty<span class="brand-dot">.</span></a><span class="small-label">A LITTLE LESS SCROLL. A LITTLE MORE CONNECTION.</span><button class="icon-button theme-toggle" aria-label="Toggle color theme"><Icon name="sun" /></button></header>
+    <header class="join-nav">
+      <a href="/" class="brand"
+        ><span class="brand-icon"><Icon name="chat" size={25} /></span
+        >chatty<span class="brand-dot">.</span></a
+      ><span class="small-label"
+        >A LITTLE LESS SCROLL. A LITTLE MORE CONNECTION.</span
+      ><button class="icon-button theme-toggle" aria-label="Toggle color theme"
+        ><Icon name="sun" /></button
+      >
+    </header>
     <main class="join-grid">
-      <section class="join-story"><span class="eyebrow"><i class="status-dot"></i> YOUR PEOPLE ARE HERE</span><h1>Good people.<br />Great <span>conversations.</span></h1><p>A space to share a thought, find your people,<br class="desktop-only" /> and see where the conversation takes you.</p>
-        <div class="conversation-art" aria-hidden="true"><div class="art-bubble violet-bubble"><span>✦</span> Big ideas welcome.</div><div class="art-bubble lime-bubble">Small talk, too. <span>↗</span></div><span class="art-orbit">✳</span><div class="art-caption"><span class="mini-dot"></span> MANY ROOMS. ENDLESS POSSIBILITIES.</div></div>
+      <section class="join-story">
+        <span class="eyebrow"
+          ><i class="status-dot"></i> YOUR PEOPLE ARE HERE</span
+        ><h1>Good people.<br />Great <span>conversations.</span></h1><p>
+          A space to share a thought, find your people,<br
+            class="desktop-only"
+          /> and see where the conversation takes you.
+        </p>
+        <div class="conversation-art" aria-hidden="true">
+          <div class="art-bubble violet-bubble">
+            <span>✦</span> Big ideas welcome.
+          </div><div class="art-bubble lime-bubble">
+            Small talk, too. <span>↗</span>
+          </div><span class="art-orbit">✳</span><div class="art-caption">
+            <span class="mini-dot"></span> MANY ROOMS. ENDLESS POSSIBILITIES.
+          </div>
+        </div>
       </section>
-      <section class="join-card"><span class="card-kicker">MAKE YOURSELF AT HOME</span><div class="join-symbol"><Icon name="chat" size={34} /></div><h2>What should we<br />call you?</h2><p>Pick a nickname and jump right in.<br />No passwords. Just you.</p>
-        {remembered && <section class="returning-user"><p>WELCOME BACK</p><button id="continue-identity" class="primary-button">Continue as {remembered.nickname} <Icon name="arrow" /></button><button id="forget-identity" class="text-button">Forget this browser</button><p class="form-error" role="alert"></p></section>}
-        <details class="recovery-entry"><summary>Already have a nickname? Use a recovery code</summary><form id="restore-form"><label for="recovery-code">Your recovery code</label><input id="recovery-code" name="code" type="password" autocomplete="off" spellcheck="false" required /><p class="field-hint">Use the private code you saved from your profile.</p><p class="form-error" role="alert"></p><button class="primary-button" type="submit">Restore my identity</button></form></details>
-        <form id="join-form" action="/api/join" method="post"><label for="nickname">Your nickname</label><input id="nickname" name="nickname" placeholder="e.g. cosmic_curious" minlength="2" maxlength="24" pattern="[a-zA-Z0-9_][a-zA-Z0-9_.\-]{1,23}" autocomplete="nickname" required /><p class="field-hint">2–24 characters. Keep it uniquely you.</p><p class="form-error" role="alert"></p><button type="submit" class="primary-button">Let’s get chatty <Icon name="arrow" /></button></form>
-        <div class="join-foot"><span class="status-dot"></span> This browser remembers you for 30 days, even after logout.</div>
+      <section class="join-card">
+        <span class="card-kicker">MAKE YOURSELF AT HOME</span>{
+          blocked && (
+            <p class="account-notice" role="status">
+              This account has been blocked. Contact a workspace administrator
+              for help.
+            </p>
+          )
+        }<div class="join-symbol"><Icon name="chat" size={34} /></div><h2>
+          What should we<br />call you?
+        </h2><p>
+          Pick a nickname and jump right in.<br />No passwords. Just you.
+        </p>
+        {
+          remembered && (
+            <section class="returning-user">
+              <>
+                <p>WELCOME BACK</p>
+                <button id="continue-identity" class="primary-button">
+                  Continue as {remembered.nickname} <Icon name="arrow" />
+                </button>
+                <button id="forget-identity" class="text-button">
+                  Forget this browser
+                </button>
+                <p class="form-error" role="alert" />
+              </>
+            </section>
+          )
+        }
+        <details class="recovery-entry">
+          <summary>Already have a nickname? Use a recovery code</summary><form
+            id="restore-form"
+          >
+            <label for="recovery-code">Your recovery code</label><input
+              id="recovery-code"
+              name="code"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              required
+            /><p class="field-hint">
+              Use the private code you saved from your profile.
+            </p><p class="form-error" role="alert"></p><button
+              class="primary-button"
+              type="submit">Restore my identity</button
+            >
+          </form>
+        </details>
+        <form id="join-form" action="/api/join" method="post">
+          <label for="nickname">Your nickname</label><input
+            id="nickname"
+            name="nickname"
+            placeholder="e.g. cosmic_curious"
+            minlength="2"
+            maxlength="24"
+            pattern="[a-zA-Z0-9_][a-zA-Z0-9_.\-]{1,23}"
+            autocomplete="nickname"
+            required
+          /><p class="field-hint">2–24 characters. Keep it uniquely you.</p><p
+            class="form-error"
+            role="alert"
+          >
+          </p><button type="submit" class="primary-button"
+            >Let’s get chatty <Icon name="arrow" /></button
+          >
+        </form>
+        <div class="join-foot">
+          <span class="status-dot"></span> This browser remembers you for 30 days,
+          even after logout.
+        </div>
       </section>
-    </main><footer class="join-footer"><span>COME AS YOU ARE. STAY FOR THE CONVERSATION.</span><span>Be curious. Be kind. <span class="violet-text">Be chatty.</span></span></footer>
+    </main><footer class="join-footer">
+      <span>COME AS YOU ARE. STAY FOR THE CONVERSATION.</span><span
+        >Be curious. Be kind. <span class="violet-text">Be chatty.</span></span
+      >
+    </footer>
   </div>
   <script>
-    import { setupTheme } from '../scripts/preferences.js';
+    import { setupTheme } from "../scripts/preferences.js";
     setupTheme();
-    async function restoreIdentity(data, container) {
-      const error = container.querySelector('.form-error'); error.textContent = '';
-      const button = container.querySelector('.primary-button'); button.disabled = true;
+    async function restoreIdentity(
+      data: Record<string, FormDataEntryValue>,
+      container: EventTarget | null,
+    ) {
+      if (!(container instanceof Element)) return;
+      const error = container.querySelector<HTMLElement>(".form-error");
+      const button =
+        container.querySelector<HTMLButtonElement>(".primary-button");
+      if (!error || !button) return;
+      error.textContent = "";
+      button.disabled = true;
       try {
-        const response = await fetch('/api/identity/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const response = await fetch("/api/identity/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
         if (!response.ok) throw new Error((await response.json()).error);
-        location.assign('/rooms/lobby');
-      } catch (problem) { error.textContent = problem.message; button.disabled = false; }
+        location.assign("/rooms/lobby");
+      } catch (problem) {
+        error.textContent =
+          problem instanceof Error
+            ? problem.message
+            : "Could not restore this identity. Please try again.";
+        button.disabled = false;
+      }
     }
-    document.querySelector('#continue-identity')?.addEventListener('click', event => restoreIdentity({}, event.currentTarget.closest('section')));
-    document.querySelector('#restore-form').addEventListener('submit', event => { event.preventDefault(); restoreIdentity(Object.fromEntries(new FormData(event.currentTarget)), event.currentTarget); });
-    document.querySelector('#forget-identity')?.addEventListener('click', async () => {
-      try {
-        const response = await fetch('/api/identity/forget', { method: 'POST' });
-        if (!response.ok) throw new Error('Could not forget this browser. Please try again.');
-        location.reload();
-      } catch (error) { document.querySelector('.returning-user .form-error').textContent = error.message; }
-    });
-    const form = document.querySelector('#join-form');
-    form.addEventListener('submit', async event => {
+    document
+      .querySelector("#continue-identity")
+      ?.addEventListener("click", (event) =>
+        restoreIdentity(
+          {},
+          event.currentTarget instanceof Element
+            ? event.currentTarget.closest("section")
+            : null,
+        ),
+      );
+    const restoreForm =
+      document.querySelector<HTMLFormElement>("#restore-form");
+    restoreForm?.addEventListener("submit", (event) => {
       event.preventDefault();
-      const button = form.querySelector('button'); button.disabled = true;
-      const error = form.querySelector('.form-error'); error.textContent = '';
+      const target = event.currentTarget;
+      if (!(target instanceof HTMLFormElement)) return;
+      restoreIdentity(Object.fromEntries(new FormData(target)), target);
+    });
+    document
+      .querySelector("#forget-identity")
+      ?.addEventListener("click", async () => {
+        try {
+          const response = await fetch("/api/identity/forget", {
+            method: "POST",
+          });
+          if (!response.ok)
+            throw new Error("Could not forget this browser. Please try again.");
+          location.reload();
+        } catch (error) {
+          const feedback = document.querySelector<HTMLElement>(
+            ".returning-user .form-error",
+          );
+          if (feedback) {
+            feedback.textContent =
+              error instanceof Error
+                ? error.message
+                : "Could not forget this browser. Please try again.";
+          }
+        }
+      });
+    const form = document.querySelector<HTMLFormElement>("#join-form");
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const target = event.currentTarget;
+      if (!(target instanceof HTMLFormElement)) return;
+      const button = target.querySelector<HTMLButtonElement>(
+        'button[type="submit"]',
+      );
+      const error = target.querySelector<HTMLElement>(".form-error");
+      if (!button || !error) return;
+      button.disabled = true;
+      error.textContent = "";
       try {
-        const response = await fetch('/api/join', { method: 'POST', body: new URLSearchParams(new FormData(form)) });
-        if (!response.ok) throw new Error((await response.json()).error || 'Could not join. Try again.');
-        location.assign('/rooms/lobby');
-      } catch (problem) { error.textContent = problem.message; button.disabled = false; }
+        const body = new URLSearchParams();
+        new FormData(target).forEach((value, name) =>
+          body.append(name, String(value)),
+        );
+        const response = await fetch("/api/join", {
+          method: "POST",
+          body,
+        });
+        if (!response.ok)
+          throw new Error(
+            (await response.json()).error || "Could not join. Try again.",
+          );
+        location.assign("/rooms/lobby");
+      } catch (problem) {
+        error.textContent =
+          problem instanceof Error
+            ? problem.message
+            : "Could not join. Try again.";
+        button.disabled = false;
+      }
     });
   </script>
 </Base>

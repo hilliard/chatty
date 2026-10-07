@@ -1,34 +1,506 @@
 ---
-import Base from '../layouts/Base.astro';
-import Icon from './Icon.astro';
-import { rooms } from '../server/chat.mjs';
+import Base from "../layouts/Base.astro";
+import Icon from "./Icon.astro";
+import { rooms } from "../server/chat.mjs";
 const { room = null } = Astro.props;
-const user = Astro.locals.user;
-const allRooms = await rooms();
+type ChatUser = {
+  human_id: string;
+  nickname: string;
+  color: string;
+  role: string;
+  account_status: string;
+  deletion_at: string | null;
+};
+type RoomItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  online: number;
+};
+const user = (Astro.locals as typeof Astro.locals & { user: ChatUser }).user;
+const allRooms = (await rooms()) as RoomItem[];
 ---
-<Base title={`${room?.name || 'Find your room'} · Chatty`}>
-<div id="chat-app" class:list={['app-shell', { 'room-view': room }]} data-room={room?.id || ''} data-user={user.human_id} data-nickname={user.nickname}>
-  <aside class="sidebar"><a class="brand" href="/rooms"><span class="brand-icon"><Icon name="chat" size={24} /></span>chatty<span class="brand-dot">.</span></a><p class="workspace-label">YOUR DAILY DOSE OF CONNECTION</p>
-    <a href="/rooms" class="discover-link"><Icon name="people" /> The community <span>↗</span></a>
-    <div class="section-label"><span>CONVERSATION ROOMS</span><button class="small-button" data-open="new-room" aria-label="Create a room"><Icon name="plus" size={17} /></button></div>
-    <nav id="room-nav" aria-label="Chat rooms">{allRooms.map((item, index) => <a href={`/rooms/${item.id}`} class:list={['room-link', { active: room?.id === item.id }]} data-room-link={item.id}><span class:list={['room-hash', `color-${index % 4}`]}>#</span><span>{item.name}</span><small data-room-count={item.id}>{item.online}</small></a>)}</nav>
-    <button class="new-room-link" data-open="new-room"><Icon name="plus" size={17} /> Create a room</button>
-    <div class="sidebar-bottom"><div class="kind-card"><span>✳</span><strong>A little kindness.<br />A lot of good chat.</strong><p>There’s a person behind every nickname.</p></div><button class="text-button recovery-access" data-open="recovery">Save a recovery code</button><div class="profile-bar"><span class="avatar" style={`--avatar:${user.color}`}>{user.nickname.slice(0, 2).toUpperCase()}</span><div><strong class="my-name">{user.nickname}</strong><small><i class="status-dot"></i> Ready to chat</small></div><button class="icon-button" data-open="rename" aria-label="Change nickname"><Icon name="edit" size={17} /></button><form action="/api/leave" method="post"><button class="icon-button" aria-label="Log out" title="Log out"><Icon name="exit" size={18} /></button></form></div></div>
-  </aside>
-  <main class="main-panel">
-    <header class="topbar"><div class="breadcrumb">{room ? <a href="/rooms" class="mobile-back" aria-label="Back to rooms"><Icon name="back" /></a> : <span class="mobile-wordmark">chatty<span class="brand-dot">.</span></span>}<span>THE COMMUNITY</span><span class="breadcrumb-divider">/</span><strong>{room?.name || 'All rooms'}</strong></div><div class="topbar-actions"><span class="connection-pill" id="connection"><i class="status-dot"></i><span>Connecting</span></span><button class="icon-button theme-toggle" aria-label="Toggle color theme"><Icon name="sun" /></button><button class="icon-button" id="sound-toggle" aria-label="Enable notification sounds" aria-pressed="false"><Icon name="sound" /><span class="mute-slash"></span></button><div class="notifications-wrap"><button class="icon-button" id="notifications-toggle" aria-label="Notifications" aria-expanded="false"><Icon name="bell" /><span id="notification-count" hidden></span></button><section id="notifications-panel" class="popover" hidden><div class="popover-title"><strong>Your mentions</strong><button id="read-notifications" class="text-button">Mark all read</button></div><div id="notification-list"><p>You’re all caught up.</p></div></section></div></div></header>
-    {room ? <>
-      <section class="room-banner"><div><span class="eyebrow">GOOD CONVERSATIONS START HERE</span><h1><span class="banner-hash">#</span> {room.name}<span class="heading-dot">.</span></h1><p>{room.description || 'A fresh space for a good conversation.'}</p></div><div class="banner-art" aria-hidden="true"><span class="banner-asterisk">✳</span><span class="banner-talk"><Icon name="chat" size={38} /></span><span class="banner-spark">✦</span></div></section>
-      <div class="chat-layout"><section class="chat-panel" aria-label="Conversation"><div class="feed-heading"><span><i class="status-dot"></i> LIVE CONVERSATION</span><button id="room-online" class="text-button" data-open="members" aria-label="View people online">0 online</button></div>
-        <div class="message-scroll" id="message-scroll"><div class="history-control"><button id="load-earlier" class="text-button" hidden>↑ Load earlier messages</button></div><div class="welcome-message"><span class="welcome-icon"><Icon name="chat" size={28} /></span><h2>This is where it starts.</h2><p>Say hello, share a thought, or ask a question.<br />Make this room a little more you.</p><span class="day-divider">THE CONVERSATION</span></div><div id="messages" role="log" aria-live="polite" aria-relevant="additions"></div></div>
-        <button id="new-messages" class="new-messages" hidden>New messages ↓</button><div id="typing" class="typing" aria-live="polite"></div><form id="message-form" class="composer"><div class="composer-box"><textarea id="message-input" rows="1" maxlength="4000" placeholder={`Message #${room.name}…`} aria-label={`Message ${room.name}`} required></textarea><button type="submit" class="send-button" aria-label="Send message"><Icon name="send" size={21} /></button><div id="mention-options" role="listbox" aria-label="Mention someone" hidden></div></div><div class="composer-hints"><span><kbd>Enter</kbd> to send <span class="hint-separator">·</span> <kbd>Shift + Enter</kbd> for a new line</span><span><b>@</b> to mention</span></div><p id="send-error" class="form-error" role="alert"></p></form></section>
-        <aside class="people-panel"><div class="section-label"><span>IN THIS ROOM</span><span id="people-count" class="count-label">0</span></div><div id="people-list"></div><div class="room-note"><span>✦</span><h3>A room for everyone.</h3><p>Bring your curiosity.<br />Leave room for others.</p></div><div class="room-about"><span class="small-label">ABOUT THIS SPACE</span><p>{room.description || 'Your little corner of the community.'}</p><span class="open-room"><i class="status-dot"></i> Open to everyone</span></div></aside></div>
-    </> : <section class="directory"><div class="mobile-profile"><span class="avatar" style={`--avatar:${user.color}`}>{user.nickname.slice(0, 2).toUpperCase()}</span><strong class="my-name">{user.nickname}</strong><button class="icon-button" data-open="recovery" title="Recovery code" aria-label="Recovery code">⚿</button><button class="icon-button" data-open="rename" aria-label="Change nickname"><Icon name="edit" /></button><form action="/api/leave" method="post"><button class="icon-button" aria-label="Log out" title="Log out"><Icon name="exit" /></button></form></div><span class="eyebrow">FIND YOUR CORNER</span><h1>Many rooms.<br /><span>One community.</span></h1><p>Follow your curiosity. There’s always a conversation to start.</p><div class="directory-heading"><h2>Explore the rooms</h2><button class="primary-button compact" data-open="new-room"><Icon name="plus" size={18} /> New room</button></div><div class="room-grid" id="room-grid">{allRooms.map((item, index) => <a class={`room-card color-${index % 4}`} href={`/rooms/${item.id}`} data-room-card={item.id}><span class="card-hash">#</span><h3>{item.name}</h3><p>{item.description || 'A new space for a fresh conversation.'}</p><div><span><i class="status-dot"></i> <b data-room-count={item.id}>{item.online}</b> online</span><Icon name="arrow" /></div></a>)}</div></section>}
-  </main>
-</div>
-<dialog id="new-room"><form id="new-room-form"><div class="dialog-top"><span class="eyebrow">MAKE SOME SPACE</span><button type="button" class="icon-button" data-close aria-label="Close"><Icon name="close" /></button></div><h2>A new conversation<br />starts with you.</h2><label for="room-name">Room name</label><input id="room-name" name="name" maxlength="48" placeholder="e.g. Creative corner" required /><label for="room-description">What’s it about? <span class="muted">(optional)</span></label><textarea id="room-description" name="description" maxlength="180" rows="3" placeholder="Give people a reason to drop in."></textarea><p class="form-error" role="alert"></p><button class="primary-button" type="submit">Create room <Icon name="arrow" /></button></form></dialog>
-<dialog id="rename"><form id="rename-form"><div class="dialog-top"><span class="eyebrow">A FRESH INTRODUCTION</span><button type="button" class="icon-button" data-close aria-label="Close"><Icon name="close" /></button></div><h2>New name.<br />Same you.</h2><label for="new-nickname">Your nickname</label><input id="new-nickname" name="nickname" value={user.nickname} minlength="2" maxlength="24" required /><p class="form-error" role="alert"></p><button class="primary-button" type="submit">Save nickname <Icon name="arrow" /></button></form></dialog>
-<dialog id="members"><div class="dialog-top"><h2>In this room</h2><button class="icon-button" data-close aria-label="Close"><Icon name="close" /></button></div><div id="mobile-people-list"></div></dialog>
-<dialog id="recovery"><div class="dialog-top"><span class="eyebrow">KEEP YOUR NICKNAME</span><button class="icon-button" data-close aria-label="Close"><Icon name="close" /></button></div><h2>Your way back in.</h2><p>Save a private recovery code to sign in on another browser. Anyone with the code can use your identity.</p><p>Creating a new code replaces your previous code.</p><button id="generate-recovery" class="primary-button">Create or replace recovery code</button><div id="recovery-result" hidden><label for="saved-recovery-code">Copy and save this code somewhere private</label><input id="saved-recovery-code" readonly autocomplete="off" spellcheck="false" /><p class="field-hint">This code is shown only here. It is cleared when you close this dialog.</p></div><p class="form-error" role="alert"></p><form action="/api/leave" method="post"><input type="hidden" name="forget" value="true" /><button class="text-button">Log out and forget this browser</button></form></dialog>
-<script>import '../scripts/chat-client.js';</script>
+
+<Base title={`${room?.name || "Find your room"} · Chatty`}>
+  <div
+    id="chat-app"
+    class:list={["app-shell", { "room-view": room }]}
+    data-room={room?.id || ""}
+    data-user={user.human_id}
+    data-nickname={user.nickname}
+  >
+    <aside class="sidebar">
+      <a class="brand" href="/rooms"
+        ><span class="brand-icon"><Icon name="chat" size={24} /></span
+        >chatty<span class="brand-dot">.</span></a
+      ><p class="workspace-label">YOUR DAILY DOSE OF CONNECTION</p>
+      <a href="/rooms" class="discover-link"
+        ><Icon name="people" /> The community <span>↗</span></a
+      >
+      {
+        user.role === "admin" && (
+          <a href="/admin" class="admin-nav-link">
+            Administration
+          </a>
+        )
+      }
+      <div class="section-label">
+        <span>CONVERSATION ROOMS</span><button
+          class="small-button"
+          data-open="new-room"
+          aria-label="Create a room"><Icon name="plus" size={17} /></button
+        >
+      </div>
+      <nav id="room-nav" aria-label="Chat rooms">
+        {
+          allRooms.map((item, index) => (
+            <a
+              href={`/rooms/${item.id}`}
+              class:list={["room-link", { active: room?.id === item.id }]}
+              data-room-link={item.id}
+            >
+              <>
+                <span class:list={["room-hash", `color-${index % 4}`]}>#</span>
+                <span>{item.name}</span>
+                <small data-room-count={item.id}>{item.online}</small>
+              </>
+            </a>
+          ))
+        }
+      </nav>
+      <button class="new-room-link" data-open="new-room"
+        ><Icon name="plus" size={17} /> Create a room</button
+      >
+      <div class="sidebar-bottom">
+        <div class="kind-card">
+          <span>✳</span><strong
+            >A little kindness.<br />A lot of good chat.</strong
+          ><p>There’s a person behind every nickname.</p>
+        </div><button class="text-button recovery-access" data-open="recovery"
+          >Save a recovery code</button
+        ><div class="profile-bar">
+          <span class="avatar" style={`--avatar:${user.color}`}
+            >{user.nickname.slice(0, 2).toUpperCase()}</span
+          ><div>
+            <strong class="my-name">{user.nickname}</strong><small
+              ><i class="status-dot"></i> Ready to chat</small
+            >
+          </div><button
+            class="icon-button"
+            data-open="rename"
+            aria-label="Change nickname"><Icon name="edit" size={17} /></button
+          ><form action="/api/leave" method="post">
+            <button class="icon-button" aria-label="Log out" title="Log out"
+              ><Icon name="exit" size={18} /></button
+            >
+          </form>
+        </div>
+      </div>
+    </aside>
+    <main class="main-panel">
+      {
+        user.account_status === "set_for_deletion" && (
+          <aside class="account-notice" role="status">
+            Your account is scheduled for permanent deletion on{" "}
+            {new Date(user.deletion_at!).toLocaleDateString()}. Contact an
+            administrator before then if this was unexpected.
+          </aside>
+        )
+      }
+      <header class="topbar">
+        <div class="breadcrumb">
+          {
+            room ? (
+              <a href="/rooms" class="mobile-back" aria-label="Back to rooms">
+                <Icon name="back" />
+              </a>
+            ) : (
+              <span class="mobile-wordmark">
+                chatty<span class="brand-dot">.</span>
+              </span>
+            )
+          }<span>THE COMMUNITY</span><span class="breadcrumb-divider">/</span
+          ><strong>{room?.name || "All rooms"}</strong>
+        </div><div class="topbar-actions">
+          <span class="connection-pill" id="connection"
+            ><i class="status-dot"></i><span>Connecting</span></span
+          ><button
+            class="icon-button theme-toggle"
+            aria-label="Toggle color theme"><Icon name="sun" /></button
+          ><button
+            class="icon-button"
+            id="sound-toggle"
+            aria-label="Enable notification sounds"
+            aria-pressed="false"
+            ><Icon name="sound" /><span class="mute-slash"></span></button
+          ><div class="notifications-wrap">
+            <button
+              class="icon-button"
+              id="notifications-toggle"
+              aria-label="Notifications"
+              aria-expanded="false"
+              ><Icon name="bell" /><span id="notification-count" hidden
+              ></span></button
+            ><section id="notifications-panel" class="popover" hidden>
+              <div class="popover-title">
+                <strong>Your mentions</strong><button
+                  id="read-notifications"
+                  class="text-button">Mark all read</button
+                >
+              </div><div id="notification-list">
+                <p>You’re all caught up.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </header>
+      {
+        room ? (
+          <>
+            <section class="room-banner">
+              <>
+                <div>
+                  <>
+                    <span class="eyebrow">GOOD CONVERSATIONS START HERE</span>
+                    <h1>
+                      <span class="banner-hash">#</span> {room.name}
+                      <span class="heading-dot">.</span>
+                    </h1>
+                    <p>
+                      {room.description ||
+                        "A fresh space for a good conversation."}
+                    </p>
+                  </>
+                </div>
+                <div class="banner-art" aria-hidden="true">
+                  <>
+                    <span class="banner-asterisk">✳</span>
+                    <span class="banner-talk">
+                      <Icon name="chat" size={38} />
+                    </span>
+                    <span class="banner-spark">✦</span>
+                  </>
+                </div>
+              </>
+            </section>
+            <div class="chat-layout">
+              <section class="chat-panel" aria-label="Conversation">
+                <div class="feed-heading">
+                  <>
+                    <span>
+                      <i class="status-dot" /> LIVE CONVERSATION
+                    </span>
+                    <button
+                      id="room-online"
+                      class="text-button"
+                      data-open="members"
+                      aria-label="View people online"
+                    >
+                      0 online
+                    </button>
+                  </>
+                </div>
+                <div class="message-scroll" id="message-scroll">
+                  <>
+                    <div class="history-control">
+                      <button id="load-earlier" class="text-button" hidden>
+                        ↑ Load earlier messages
+                      </button>
+                    </div>
+                    <div class="welcome-message">
+                      <>
+                        <span class="welcome-icon">
+                          <Icon name="chat" size={28} />
+                        </span>
+                        <h2>This is where it starts.</h2>
+                        <p>
+                          Say hello, share a thought, or ask a question.
+                          <br />
+                          Make this room a little more you.
+                        </p>
+                        <span class="day-divider">THE CONVERSATION</span>
+                      </>
+                    </div>
+                    <div
+                      id="messages"
+                      role="log"
+                      aria-live="polite"
+                      aria-relevant="additions"
+                    />
+                  </>
+                </div>
+                <>
+                  <button id="new-messages" class="new-messages" hidden>
+                    New messages ↓
+                  </button>
+                  <div id="typing" class="typing" aria-live="polite" />
+                  <form id="message-form" class="composer">
+                    <>
+                      <div class="composer-box">
+                        <>
+                          <textarea
+                            id="message-input"
+                            rows="1"
+                            maxlength="4000"
+                            placeholder={`Message #${room.name}…`}
+                            aria-label={`Message ${room.name}`}
+                            required
+                          />
+                          <button
+                            type="submit"
+                            class="send-button"
+                            aria-label="Send message"
+                          >
+                            <Icon name="send" size={21} />
+                          </button>
+                          <div
+                            id="mention-options"
+                            role="listbox"
+                            aria-label="Mention someone"
+                            hidden
+                          />
+                        </>
+                      </div>
+                      <div class="composer-hints">
+                        <>
+                          <span>
+                            <kbd>Enter</kbd> to send{" "}
+                            <span class="hint-separator">·</span>{" "}
+                            <kbd>Shift + Enter</kbd> for a new line
+                          </span>
+                          <span>
+                            <b>@</b> to mention
+                          </span>
+                        </>
+                      </div>
+                      <p id="send-error" class="form-error" role="alert" />
+                    </>
+                  </form>
+                </>
+              </section>
+              <aside class="people-panel">
+                <>
+                  <div class="section-label">
+                    <>
+                      <span>IN THIS ROOM</span>
+                      <span id="people-count" class="count-label">
+                        0
+                      </span>
+                    </>
+                  </div>
+                  <div id="people-list" />
+                  <div class="room-note">
+                    <>
+                      <span>✦</span>
+                      <h3>A room for everyone.</h3>
+                      <p>
+                        Bring your curiosity.
+                        <br />
+                        Leave room for others.
+                      </p>
+                    </>
+                  </div>
+                  <div class="room-about">
+                    <>
+                      <span class="small-label">ABOUT THIS SPACE</span>
+                      <p>
+                        {room.description ||
+                          "Your little corner of the community."}
+                      </p>
+                      <span class="open-room">
+                        <i class="status-dot" /> Open to everyone
+                      </span>
+                    </>
+                  </div>
+                </>
+              </aside>
+            </div>
+          </>
+        ) : (
+          <section class="directory">
+            <>
+              <div class="mobile-profile">
+                <strong class="my-name">{user.nickname}</strong>
+                {user.role === "admin" && (
+                  <a class="text-button" href="/admin">
+                    Admin
+                  </a>
+                )}
+                <button
+                  class="icon-button"
+                  data-open="recovery"
+                  title="Recovery code"
+                  aria-label="Recovery code"
+                >
+                  ⚿
+                </button>
+                <>
+                  <button
+                    class="icon-button"
+                    data-open="rename"
+                    aria-label="Change nickname"
+                  >
+                    <Icon name="edit" />
+                  </button>
+                  <form action="/api/leave" method="post">
+                    <button
+                      class="icon-button"
+                      aria-label="Log out"
+                      title="Log out"
+                    >
+                      <Icon name="exit" />
+                    </button>
+                  </form>
+                </>
+              </div>
+              <span class="eyebrow">FIND YOUR CORNER</span>
+              <h1>
+                Many rooms.
+                <>
+                  <br />
+                  <span>One community.</span>
+                </>
+              </h1>
+              <p>
+                Follow your curiosity. There’s always a conversation to start.
+              </p>
+              <div class="directory-heading">
+                <>
+                  <h2>Explore the rooms</h2>
+                  <button class="primary-button compact" data-open="new-room">
+                    <Icon name="plus" size={18} /> New room
+                  </button>
+                </>
+              </div>
+              <div class="room-grid" id="room-grid">
+                {allRooms.map((item, index) => (
+                  <a
+                    class={`room-card color-${index % 4}`}
+                    href={`/rooms/${item.id}`}
+                    data-room-card={item.id}
+                  >
+                    <span class="card-hash">#</span>
+                    <h3>{item.name}</h3>
+                    <p>
+                      {item.description ||
+                        "A new space for a fresh conversation."}
+                    </p>
+                    <div>
+                      <span>
+                        <i class="status-dot" />{" "}
+                        <b data-room-count={item.id}>{item.online}</b> online
+                      </span>
+                      <Icon name="arrow" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </>
+          </section>
+        )
+      }
+    </main>
+  </div>
+  <dialog id="new-room">
+    <form id="new-room-form">
+      <div class="dialog-top">
+        <span class="eyebrow">MAKE SOME SPACE</span><button
+          type="button"
+          class="icon-button"
+          data-close
+          aria-label="Close"><Icon name="close" /></button
+        >
+      </div><h2>A new conversation<br />starts with you.</h2><label
+        for="room-name">Room name</label
+      ><input
+        id="room-name"
+        name="name"
+        maxlength="48"
+        placeholder="e.g. Creative corner"
+        required
+      /><label for="room-description"
+        >What’s it about? <span class="muted">(optional)</span></label
+      ><textarea
+        id="room-description"
+        name="description"
+        maxlength="180"
+        rows="3"
+        placeholder="Give people a reason to drop in."></textarea><p
+        class="form-error"
+        role="alert"
+      >
+      </p><button class="primary-button" type="submit"
+        >Create room <Icon name="arrow" /></button
+      >
+    </form>
+  </dialog>
+  <dialog id="rename">
+    <form id="rename-form">
+      <div class="dialog-top">
+        <span class="eyebrow">A FRESH INTRODUCTION</span><button
+          type="button"
+          class="icon-button"
+          data-close
+          aria-label="Close"><Icon name="close" /></button
+        >
+      </div><h2>New name.<br />Same you.</h2><label for="new-nickname"
+        >Your nickname</label
+      ><input
+        id="new-nickname"
+        name="nickname"
+        value={user.nickname}
+        minlength="2"
+        maxlength="24"
+        required
+      /><p class="form-error" role="alert"></p><button
+        class="primary-button"
+        type="submit">Save nickname <Icon name="arrow" /></button
+      >
+    </form>
+  </dialog>
+  <dialog id="members">
+    <div class="dialog-top">
+      <h2>In this room</h2><button
+        class="icon-button"
+        data-close
+        aria-label="Close"><Icon name="close" /></button
+      >
+    </div><div id="mobile-people-list"></div>
+  </dialog>
+  <dialog id="recovery">
+    <div class="dialog-top">
+      <span class="eyebrow">KEEP YOUR NICKNAME</span><button
+        class="icon-button"
+        data-close
+        aria-label="Close"><Icon name="close" /></button
+      >
+    </div><h2>Your way back in.</h2><p>
+      Save a private recovery code to sign in on another browser. Anyone with
+      the code can use your identity.
+    </p><p>Creating a new code replaces your previous code.</p><button
+      id="generate-recovery"
+      class="primary-button">Create or replace recovery code</button
+    ><div id="recovery-result" hidden>
+      <label for="saved-recovery-code"
+        >Copy and save this code somewhere private</label
+      ><input
+        id="saved-recovery-code"
+        readonly
+        autocomplete="off"
+        spellcheck="false"
+      /><p class="field-hint">
+        This code is shown only here. It is cleared when you close this dialog.
+      </p>
+    </div><p class="form-error" role="alert"></p><form
+      action="/api/leave"
+      method="post"
+    >
+      <input type="hidden" name="forget" value="true" /><button
+        class="text-button">Log out and forget this browser</button
+      >
+    </form>
+  </dialog>
+  <script>
+    import "../scripts/chat-client.js";
+  </script>
 </Base>

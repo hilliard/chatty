@@ -131,3 +131,79 @@ Mark all your mentions read. Authentication: session.
 Body: {}
 
 204: no body. Broadcasts notificationsread to your sessions.
+
+## GET /api/admin/users
+
+List managed users. Authentication: admin.
+
+200: users with role and account status.
+
+## POST /api/admin/users
+
+Create a user and one-time recovery code. Authentication: admin.
+
+Body: {"nickname":"string"}
+
+201: { user, recoveryCode }. Share the recovery code privately; it is shown only once.
+
+## POST /api/admin/users/{humanId}/rename
+
+Change a user nickname. Authentication: admin.
+
+Body: {"nickname":"string"}
+
+200: updated user.
+
+## POST /api/admin/users/{humanId}/role
+
+Change a user role. Authentication: admin.
+
+Body: {"role":"string (user or admin)"}
+
+200: updated user. The last administrator cannot be demoted.
+
+## POST /api/admin/users/{humanId}/status
+
+Block, restore, or schedule deletion for a user. Authentication: admin.
+
+Body: {"status":"string (active, blocked, or set_for_deletion)"}
+
+200: updated user. Scheduled deletion is permanent after 30 days.
+
+## POST /api/admin/users/{humanId}/delete
+
+Permanently delete a user and authored messages. Authentication: admin.
+
+Body: {"confirm":"boolean (required)"}
+
+200: { ok }. Explicit confirmation is required.
+
+## GET /api/admin/rooms
+
+List managed rooms. Authentication: admin.
+
+200: rooms.
+
+## POST /api/admin/rooms
+
+Create a room. Authentication: admin.
+
+Body: {"name":"string (1–48 characters)","description":"string (optional; up to 180 characters)"}
+
+201: { room }.
+
+## POST /api/admin/rooms/{roomId}
+
+Rename a room or update its description. Authentication: admin.
+
+Body: {"name":"string (1–48 characters)","description":"string (optional; up to 180 characters)"}
+
+200: { room }.
+
+## POST /api/admin/rooms/{roomId}/delete
+
+Delete a room and its messages. Authentication: admin.
+
+Body: {"confirm":"boolean (required)"}
+
+200: { ok }. Lobby cannot be deleted.

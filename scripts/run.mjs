@@ -5,7 +5,7 @@ const [mode, action] = process.argv.slice(2);
 if (!['development', 'production'].includes(mode)) throw new Error('Invalid environment');
 config({ path: `.env.${mode}`, quiet: true }); // Injected Coolify values take precedence.
 process.env.NODE_ENV = mode;
-process.env.PORT ||= '4324';
+process.env.PORT ||= '4238';
 if (action === 'migrate') {
   const { migrate } = await import('./migrate.mjs');
   await migrate();
@@ -24,7 +24,7 @@ if (action === 'migrate') {
     await migrate();
   }
   const args = action === 'dev'
-    ? ['node_modules/astro/bin/astro.mjs', 'dev', '--host', process.env.HOST || '127.0.0.1', '--port', process.env.PORT || '4324']
+    ? ['node_modules/astro/bin/astro.mjs', 'dev', '--host', process.env.HOST || '127.0.0.1', '--port', process.env.PORT || '4238']
     : ['dist/server/entry.mjs'];
   const children = [spawn(process.execPath, args, { stdio: 'inherit' })];
   if (process.env.EVENT_DASHBOARD_API_KEY && process.env.EVENT_DASHBOARD_URL) {

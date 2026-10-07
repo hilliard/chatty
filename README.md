@@ -13,7 +13,7 @@ Requires Node.js 22.12+ and native PostgreSQL. No local Docker is required.
 3. Create a PostgreSQL login and a database named `chatty_development` owned by that
    login. Set `DATABASE_URL` with its actual password in `.env.development`.
 4. Run `npm run db:setup` to create tables and seed System and Lobby.
-5. Run `npm run dev`; open http://127.0.0.1:4324.
+5. Run `npm run dev`; open http://127.0.0.1:4238.
 
 Use a dedicated Chatty database, not the event-dashboard database. URI-encode
 special characters in the database password. No credentials are committed.
@@ -27,12 +27,12 @@ Commands explicitly load `.env.development` or `.env.production`. Variables alre
 in the process environment take precedence, allowing Coolify to inject secrets.
 Real environment files are ignored by Git and excluded from Docker builds.
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection URI; required for migrations/runtime |
-| `HOST` | `127.0.0.1` locally; `0.0.0.0` on Coolify |
-| `PORT` | HTTP port, default 4324 |
-| `EVENT_DASHBOARD_URL` | Dashboard API origin, without `/api/events` |
+| Variable                  | Purpose                                                         |
+| ------------------------- | --------------------------------------------------------------- |
+| `DATABASE_URL`            | PostgreSQL connection URI; required for migrations/runtime      |
+| `HOST`                    | `127.0.0.1` locally; `0.0.0.0` on Coolify                       |
+| `PORT`                    | HTTP port; development default 4238, Coolify default 4328       |
+| `EVENT_DASHBOARD_URL`     | Dashboard API origin, without `/api/events`                     |
 | `EVENT_DASHBOARD_API_KEY` | Server-only Chatty project key; empty disables automatic worker |
 
 Production file example: `.env.production.example`. The local `.env.production`
@@ -73,10 +73,9 @@ and key in the relevant environment. No changes to that project are required.
 
 `enqueueEvent(client, type, metadata)` in `src/server/events.mjs` writes to
 `event_outbox`. Business operations must pass their existing transaction client,
-so their data and event commit together. Intended events include `user.joined`,
-`user.renamed`, `room.created`, and `message.sent`. Include IDs and counts, not
-message contents, credentials, or personal details. These business hooks will be
-connected when the chat endpoints are implemented.
+so their data and event commit together. Chat, identity, room, and administrator
+management writes enqueue events in the same transaction as their data changes.
+Include IDs and counts, not message contents, credentials, or personal details.
 
 The worker sends channel `chatty`, title equal to the event type, and metadata with
 `eventId`, `eventType`, `apiVersion`, and `occurredAt`. It retries failures with
@@ -90,6 +89,27 @@ It will be sent by the worker; verify it in the dashboard. Delivery is **at leas
 once**: the receiver does not yet support idempotency, so a crash or lost response
 after ingestion can produce duplicates with the same metadata event ID.
 
+## Administration
+
+Apply migrations with `npm run db:migrate` before using the administration pages.
+For the first administrator only, a trusted database operator promotes an
+existing account after verifying its owner:
+
+```sql
+UPDATE chat_profiles
+SET role = 'admin', updated_at = now()
+WHERE nickname = 'your-existing-nickname';
+```
+
+Sign in to that account and open `/admin`. Administrators can create accounts,
+change nicknames and roles, block or restore access, schedule account deletion,
+and manage rooms. New accounts receive a one-time recovery code; share it with
+the user privately. Scheduled deletion is permanent after 30 days and is checked
+once per minute. The affected user sees the deadline while signed in. Immediate
+user deletion removes that user's authored messages; deleting a room removes all
+of its messages. The built-in Lobby cannot be deleted. At least one administrator
+must remain active.
+
 ## Coolify
 
 1. Push this repository to your Git provider and create a Coolify application from
@@ -97,9 +117,9 @@ after ingestion can produce duplicates with the same metadata event ID.
 2. Provision PostgreSQL and configure `DATABASE_URL` using the hostname reachable
    from the application container. Set it as a runtime secret.
 3. Copy values from `.env.production.example` into Coolify's runtime environment,
-   replacing all placeholders. Set `HOST=0.0.0.0`, `PORT=4324`, and
+   replacing all placeholders. Set `HOST=0.0.0.0`, `PORT=4328`, and
    `NODE_ENV=production`. Add dashboard settings when ready.
-4. Set the exposed application port to 4324, configure an HTTPS domain, and use
+4. Set the exposed application port to 4328, configure an HTTPS domain, and use
    `/api/health` for the health check. The image starts with `npm start`.
 5. Keep one chat server replica while presence/SSE use in-memory state. When SSE
    is implemented, verify streaming and disconnect behavior through the proxy.
@@ -154,11 +174,11 @@ old migrations are never renamed to match a newer release.
 `GET /api/health` is public and never cached. Its JSON contains `status`,
 `app_version`, `db`, `db_synchronized`, and `timestamp`:
 
-| Status | HTTP | Meaning |
-| --- | --- | --- |
-| `up` | 200 | PostgreSQL reachable; applied migrations match the build manifest |
-| `down` | 503 | PostgreSQL unreachable or its connectivity check failed |
-| `error` | 500 | Migration mismatch or schema inspection failed |
+| Status  | HTTP | Meaning                                                           |
+| ------- | ---- | ----------------------------------------------------------------- |
+| `up`    | 200  | PostgreSQL reachable; applied migrations match the build manifest |
+| `down`  | 503  | PostgreSQL unreachable or its connectivity check failed           |
+| `error` | 500  | Migration mismatch or schema inspection failed                    |
 
 The migration check compares counts, numbers, filenames, API versions, and SHA-256
 checksums, not merely whether a migration table exists. The manifest is generated

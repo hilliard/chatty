@@ -2,6 +2,7 @@ import { pool } from '../../server/db.mjs';
 import { enqueueEvent } from '../../server/events.mjs';
 import * as chat from '../../server/chat.mjs';
 import * as identity from '../../server/identity.mjs';
+import * as admin from '../../server/admin.mjs';
 
 export async function ALL(context) {
   const { request, url, locals, cookies } = context;
@@ -29,6 +30,44 @@ export async function ALL(context) {
       return Response.json({ ok: true });
     }
     if (!user) return Response.json({ error: 'Please join again.' }, { status: 401 });
+    if (path.startsWith('admin/')) {
+      if (user.role !== 'admin') return Response.json({ error: 'Administrator access required.' }, { status: 403 });
+      if (!post && path === 'admin/users') return Response.json(await admin.listUsers());
+      if (post && path === 'admin/users') return Response.json(await admin.createUser(data.nickname), { status: 201, headers: { 'Cache-Control': 'no-store' } });
+      if (!post && path === 'admin/rooms') return Response.json(await admin.listRooms());
+      if (post && path === 'admin/rooms') return Response.json({ room: await admin.createRoom(data, user.human_id) }, { status: 201 });
+      let managed = /^admin\/users\/([^/]+)\/(rename|role|status|delete)$/.exec(path);
+      if (post && managed) {
+        const [, humanId, action] = managed;
+        if (action === 'rename') {
+          const updated = await admin.renameUser(humanId, data.nickname);
+          return updated ? Response.json({ user: updated }) : Response.json({ error: 'User not found.' }, { status: 404 });
+        }
+        if (action === 'role') {
+          const updated = await admin.setUserRole(humanId, data.role);
+          return updated ? Response.json({ user: updated }) : Response.json({ error: 'User not found.' }, { status: 404 });
+        }
+        if (action === 'status') {
+          const updated = await admin.setUserStatus(humanId, data.status);
+          return updated ? Response.json({ user: updated }) : Response.json({ error: 'User not found.' }, { status: 404 });
+        }
+        if (data.confirm !== true) return Response.json({ error: 'Explicit confirmation is required.' }, { status: 400 });
+        const deleted = await admin.deleteUser(humanId);
+        return deleted ? Response.json({ ok: true }) : Response.json({ error: 'User not found.' }, { status: 404 });
+      }
+      managed = /^admin\/rooms\/([^/]+)(?:\/(delete))?$/.exec(path);
+      if (post && managed) {
+        const [, roomId, action] = managed;
+        if (action === 'delete') {
+          if (data.confirm !== true) return Response.json({ error: 'Explicit confirmation is required.' }, { status: 400 });
+          const deleted = await admin.deleteRoom(roomId);
+          return deleted ? Response.json({ ok: true }) : Response.json({ error: 'Room not found.' }, { status: 404 });
+        }
+        const updated = await admin.updateRoom(roomId, data);
+        return updated ? Response.json({ room: updated }) : Response.json({ error: 'Room not found.' }, { status: 404 });
+      }
+      return Response.json({ error: 'Not found.' }, { status: 404 });
+    }
     if (post && path === 'identity/recovery-code') {
       return Response.json({ code: await identity.createRecoveryCode(user.human_id) }, { headers: { 'Cache-Control': 'no-store' } });
     }
@@ -93,6 +132,7 @@ export async function ALL(context) {
     }
     return Response.json({ error: 'Not found.' }, { status: 404 });
   } catch (error) {
+    if (error.status) return Response.json({ error: error.message }, { status: error.status });
     if (error.code === '23505') return Response.json({ error: 'That nickname is already taken. Try another.' }, { status: 409 });
     if (error instanceof SyntaxError) return Response.json({ error: 'Invalid request.' }, { status: 400 });
     if (!error.code) return Response.json({ error: error.message }, { status: 400 });

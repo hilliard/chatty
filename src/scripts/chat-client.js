@@ -214,6 +214,29 @@ events.addEventListener('typing', event => { const names = JSON.parse(event.data
 events.addEventListener('mention', () => { tone(true); notifications(); });
 events.addEventListener('notificationsread', notifications);
 events.addEventListener('newroom', event => addRoom(JSON.parse(event.data)));
+events.addEventListener('roomupdated', event => {
+  const room = JSON.parse(event.data);
+  document.querySelectorAll('[data-room-link]').forEach(link => { if (link.dataset.roomLink === room.id) link.children[1].textContent = room.name; });
+  document.querySelectorAll('[data-room-card]').forEach(card => { if (card.dataset.roomCard === room.id) { card.querySelector('h3').textContent = room.name; card.querySelector('p').textContent = room.description || 'A new space for a fresh conversation.'; } });
+  if (roomId === room.id) location.reload();
+});
+events.addEventListener('roomdeleted', event => {
+  const { roomId: deletedId } = JSON.parse(event.data);
+  document.querySelectorAll('[data-room-link],[data-room-card]').forEach(link => {
+    if (link.dataset.roomLink === deletedId || link.dataset.roomCard === deletedId) link.remove();
+  });
+  if (roomId === deletedId) location.assign('/rooms');
+});
+events.addEventListener('userdeleted', event => {
+  const { humanId } = JSON.parse(event.data);
+  if (humanId === me) { location.assign('/join'); return; }
+  online = online.filter(person => person.human_id !== humanId);
+  for (const [messageId, message] of messages) if (message.human_id === humanId) messages.delete(messageId);
+  renderPeople(); renderMessages();
+});
+events.addEventListener('accountstatus', () => location.reload());
+events.addEventListener('accountblocked', () => location.replace('/join?blocked=1'));
+events.addEventListener('rolechanged', event => { if (JSON.parse(event.data).humanId === me) location.reload(); });
 events.addEventListener('renamed', event => { const data = JSON.parse(event.data); if (data.humanId === me) { myName = data.nickname; document.querySelectorAll('.my-name').forEach(el => el.textContent = myName); } for (const message of messages.values()) if (message.human_id === data.humanId) message.nickname = data.nickname; renderMessages(); });
 window.addEventListener('pagehide', () => events.close());
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });

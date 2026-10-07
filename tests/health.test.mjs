@@ -30,3 +30,14 @@ test('OpenAPI version and operations match the shared contract', () => {
   assert.equal(openapi.info.version, appVersion);
   for (const endpoint of endpoints) assert.equal(openapi.paths[endpoint.path][endpoint.method].summary, endpoint.summary);
 });
+test('admin management operations require a session and administrator role', () => {
+  const adminEndpoints = endpoints.filter(endpoint => endpoint.auth === 'admin');
+  assert.ok(adminEndpoints.length >= 8);
+  for (const endpoint of adminEndpoints) {
+    const operation = openapi.paths[endpoint.path][endpoint.method];
+    assert.deepEqual(operation.security, [{ chatSession: [] }]);
+    assert.ok(operation.responses['403']);
+  }
+  assert.ok(endpoints.some(endpoint => endpoint.path === '/api/admin/users/{humanId}/role'));
+  assert.ok(endpoints.some(endpoint => endpoint.path === '/api/admin/rooms/{roomId}/delete'));
+});

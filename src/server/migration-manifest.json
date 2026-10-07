@@ -22,5 +22,11 @@
     "filename": "004-1.0.0-identity-recovery.sql",
     "checksum": "de415b94a5509195d03f5d94512fff2ac16f93c5b46ce90281056e2f560bea73",
     "apiVersion": "1.0.0"
+  },
+  {
+    "number": 5,
+    "filename": "005-1.0.0-admin-user-management.sql",
+    "checksum": "b74a691365ff92758a4e6a9658ad40e4ddf2c84bfd508284a9eedea45af907b4",
+    "apiVersion": "1.0.0"
   }
 ]
