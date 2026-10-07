@@ -14,4 +14,37 @@
 @media(max-width:700px){.app-shell{display:flex;flex-direction:column;height:100dvh}.sidebar{display:none}.main-panel{flex:1}.topbar{height:64px;min-height:64px;padding:0 17px;gap:5px}.breadcrumb{gap:10px}.breadcrumb>span:first-of-type,.breadcrumb-divider{display:none}.mobile-back{display:flex;color:var(--muted)}.topbar-actions{gap:2px}.connection-pill{margin-right:6px;font-size:9px}.icon-button{width:36px;height:40px}.room-banner{margin:13px 13px 12px;padding:18px 19px;min-height:122px}.room-banner h1{font-size:29px;margin-top:8px}.room-banner .eyebrow{font-size:6.5px;letter-spacing:1.1px}.room-banner p{font-size:11px}.banner-art{width:92px;height:70px;margin-left:10px}.banner-asterisk{font-size:72px;right:25px;top:-8px}.banner-talk{width:45px;height:44px;border-radius:13px 13px 13px 3px}.banner-talk svg{width:24px}.banner-spark{font-size:21px;right:0;top:0}.chat-layout{margin:0 13px 12px;gap:0}.chat-panel{border-radius:12px}.feed-heading{padding:13px 16px;font-size:8px}.message-scroll{padding:0 16px}.welcome-message{padding-top:21px}.welcome-message h2{font-size:21px}.welcome-message p{font-size:11px}.message{column-gap:10px}.message-content{font-size:14px}.composer{padding:0 10px 10px}.composer textarea{font-size:16px}.composer-hints{font-size:7px}.composer-hints .hint-separator{margin:0 2px}.typing{padding-left:17px}.directory{padding:25px 20px}.directory h1{font-size:40px}.directory-heading{margin-top:30px}.room-grid{grid-template-columns:1fr}.join-page{padding:22px;min-height:100dvh}.join-nav .small-label{display:none}.join-grid{grid-template-columns:1fr;padding:36px 0;gap:28px}.join-story h1{font-size:43px;letter-spacing:-2px}.join-story>p{font-size:14px;margin-bottom:0}.conversation-art{display:none}.join-card{max-width:none;padding:27px;border-radius:20px}.join-symbol{display:none}.join-card h2{font-size:30px;margin-top:18px}.join-card h2 br{display:none}.join-footer{font-size:9px;line-height:1.7;gap:15px}.join-footer>span:first-child{max-width:170px}.join-foot{font-size:10px}.primary-button{min-height:49px}.topbar-actions .icon-button{width:32px}.directory .primary-button{font-size:12px}.popover{right:-4px}}
 .mobile-profile{display:none}#room-online{color:var(--muted);padding:0;font-size:11px}.feed-heading{min-height:49px}#members h2{font-size:23px;margin:6px 0 22px}
 @media(max-width:700px){.mobile-profile{display:flex;align-items:center;gap:10px;margin-bottom:30px}.mobile-profile strong{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis}.mobile-profile form{display:flex}.room-banner>div:first-child{min-width:0}.room-banner h1{word-break:break-word}#room-online{min-height:24px}}
+.mobile-wordmark{display:none}
+/* Mobile navigation is the /rooms page, never an off-canvas sidebar. */
+@media(max-width:700px){
+  .app-shell{height:var(--chat-viewport-height,100dvh);overscroll-behavior:none;padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+  .sidebar,.room-view .room-banner,.room-view .welcome-icon,.room-view .day-divider,.composer-hints{display:none}
+  .topbar{height:60px;min-height:60px;padding:0 8px;gap:4px}
+  .breadcrumb{flex:1;gap:6px;overflow:hidden}.breadcrumb strong{font-size:17px}
+  .mobile-back{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0}
+  .breadcrumb>.mobile-wordmark{display:inline;font-size:24px;font-weight:800;letter-spacing:-1px;padding-left:8px;color:var(--text)}
+  .breadcrumb>span:not(.mobile-wordmark){display:none}
+  .app-shell:not(.room-view) .breadcrumb strong{display:none}
+  .topbar-actions{gap:0}.topbar-actions .icon-button,.icon-button{width:44px;height:44px;min-width:44px}
+  .connection-pill{margin-right:5px}.connection-pill:not(.offline)>span{display:none}.connection-pill.offline{font-size:11px}.connection-pill.offline>span{max-width:80px;overflow:hidden;text-overflow:ellipsis}
+  .chat-layout{margin:0;gap:0}.chat-panel{border:0;border-radius:0;background:var(--bg)}
+  .feed-heading{min-height:44px;padding:0 16px;font-size:10px}.feed-heading>span:first-child{letter-spacing:.7px}
+  #room-online{font-size:13px;min-height:44px;padding:0 4px}
+  .message-scroll{padding:0 16px;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+  .welcome-message{padding-top:20px}.welcome-message h2{font-size:22px}.welcome-message p{font-size:14px;line-height:1.6;margin-bottom:20px}
+  .message-content{font-size:16px;line-height:1.6}.message-meta{font-size:14px;gap:8px;flex-wrap:wrap}.message-meta time{font-size:12px}.you-tag{font-size:10px}
+  .system-message{font-size:12px;padding-left:0}.typing{height:26px;font-size:12px;padding:5px 16px}
+  .composer{padding:0 10px max(10px,env(safe-area-inset-bottom));background:var(--bg)}
+  .composer-box{padding:6px;border-radius:15px}.composer textarea{font-size:16px;min-height:44px;max-height:110px;padding:10px}
+  .send-button{width:44px;height:44px;border-radius:11px}.new-messages{bottom:110px;font-size:14px;min-height:44px}
+  .text-button{font-size:14px;min-height:44px}.form-error{font-size:14px}
+  #mention-options{width:300px}#mention-options button{font-size:16px;min-height:44px}
+  .directory{padding:16px 16px max(20px,env(safe-area-inset-bottom))}.directory>.eyebrow,.directory>h1,.directory>p{display:none}
+  .mobile-profile{margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--line);gap:6px}.mobile-profile strong{font-size:15px}
+  .directory-heading{margin:12px 0 18px}.directory-heading h2{font-size:21px}.directory .primary-button{font-size:14px;min-height:44px}
+  .room-card{padding:18px}.room-card h3{font-size:20px}.room-card p{font-size:15px;min-height:0}.room-card>div{font-size:13px;margin-top:15px}.card-hash{margin-bottom:13px}
+  .person{font-size:16px}.person small{font-size:13px}.popover-title{font-size:15px}.notification-item{font-size:15px}.notification-item p,#notification-list>p{font-size:14px}
+  dialog{padding:22px;max-height:calc(100dvh - 30px);overflow:auto}dialog label,label{font-size:15px}input,textarea{font-size:16px}.field-hint,.join-foot{font-size:13px}
+  .join-nav .brand{font-size:29px}.join-story h1{font-size:36px}.join-story>p,.join-card>p{font-size:16px}.join-footer{display:none}
+}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}

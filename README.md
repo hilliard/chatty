@@ -13,7 +13,7 @@ Requires Node.js 22.12+ and native PostgreSQL. No local Docker is required.
 3. Create a PostgreSQL login and a database named `chatty_development` owned by that
    login. Set `DATABASE_URL` with its actual password in `.env.development`.
 4. Run `npm run db:setup` to create tables and seed System and Lobby.
-5. Run `npm run dev`; open http://127.0.0.1:4321.
+5. Run `npm run dev`; open http://127.0.0.1:4324.
 
 Use a dedicated Chatty database, not the event-dashboard database. URI-encode
 special characters in the database password. No credentials are committed.
@@ -31,7 +31,7 @@ Real environment files are ignored by Git and excluded from Docker builds.
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection URI; required for migrations/runtime |
 | `HOST` | `127.0.0.1` locally; `0.0.0.0` on Coolify |
-| `PORT` | HTTP port, default 4321 |
+| `PORT` | HTTP port, default 4324 |
 | `EVENT_DASHBOARD_URL` | Dashboard API origin, without `/api/events` |
 | `EVENT_DASHBOARD_API_KEY` | Server-only Chatty project key; empty disables automatic worker |
 
@@ -97,9 +97,9 @@ after ingestion can produce duplicates with the same metadata event ID.
 2. Provision PostgreSQL and configure `DATABASE_URL` using the hostname reachable
    from the application container. Set it as a runtime secret.
 3. Copy values from `.env.production.example` into Coolify's runtime environment,
-   replacing all placeholders. Set `HOST=0.0.0.0`, `PORT=4321`, and
+   replacing all placeholders. Set `HOST=0.0.0.0`, `PORT=4324`, and
    `NODE_ENV=production`. Add dashboard settings when ready.
-4. Set the exposed application port to 4321, configure an HTTPS domain, and use
+4. Set the exposed application port to 4324, configure an HTTPS domain, and use
    `/api/health` for the health check. The image starts with `npm start`.
 5. Keep one chat server replica while presence/SSE use in-memory state. When SSE
    is implemented, verify streaming and disconnect behavior through the proxy.

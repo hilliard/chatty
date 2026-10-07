@@ -6,6 +6,16 @@ const app = $('#chat-app'), roomId = app.dataset.room, me = app.dataset.user;
 let myName = app.dataset.nickname, online = [], sound = false, audio, messages = new Map(), loading = false, initialized = false;
 let cursor = '', firstCursor = '', moreHistory = false, typingSent = 0, choices = [], selection = 0;
 const scroll = $('#message-scroll'), input = $('#message-input');
+// Keep the composer above the software keyboard on browsers that resize only
+// the visual viewport (not the layout viewport).
+function resizeMobileViewport() {
+  if (window.matchMedia('(max-width: 700px)').matches && window.visualViewport) {
+    app.style.setProperty('--chat-viewport-height', `${window.visualViewport.height}px`);
+  } else app.style.removeProperty('--chat-viewport-height');
+}
+resizeMobileViewport();
+window.visualViewport?.addEventListener('resize', resizeMobileViewport);
+window.addEventListener('resize', resizeMobileViewport);
 $('#generate-recovery').addEventListener('click', async () => {
   const button = $('#generate-recovery'), error = $('#recovery .form-error');
   button.disabled = true; error.textContent = '';
